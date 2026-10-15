@@ -1,0 +1,9 @@
+{{define "login"}}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DIVOOM · Sign in</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body><main class="login-page"><header><div class="eyebrow">DIVOOM / ONLINE GALLERY</div><h1>Sign in<span>.</span></h1><p>Enter the password to control your display.</p></header>
+<form class="login-form" method="post" action="/login">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+{{if .Error}}<p class="login-error" role="alert">{{.Error}}</p>{{end}}
+<button type="submit">Sign in</button></form></main></body></html>{{end}}

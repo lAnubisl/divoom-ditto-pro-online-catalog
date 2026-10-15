@@ -1,0 +1,34 @@
+# `POST /TwitterLogin`
+
+[All endpoints](../endpoints.md)
+
+Host role: **command**.
+
+Request Content-Type: `application/json`.
+
+Anonymous access: Not verified.
+
+## Request parameters
+
+| Parameter | Location | JSON / text type | Request default | Required / optional | Key accuracy | Purpose |
+| --- | --- | --- | --- | --- | --- | --- |
+| `IsAndroid` | body | integer | 0 | Not verified | Recovered key |  |
+| `TwitterName` | body | string | null | Not verified | Recovered key |  |
+| `TwitterSecret` | body | string | null | Not verified | Recovered key |  |
+| `TwitterToken` | body | string | null | Not verified | Recovered key |  |
+| `TwitterUserId` | body | string | null | Not verified | Recovered key |  |
+
+Session fields are described in [the guide](../README.md).
+
+## Response structure
+
+Recovered contract; not live-verified.
+
+| JSON path | JSON type | Key accuracy |
+| --- | --- | --- |
+| `$.DeviceId` | integer | Key casing unverified |
+| `$.ReturnCode` | integer | Key casing unverified |
+| `$.ReturnMessage` | string | Key casing unverified |
+| `$.Token` | integer | Key casing unverified |
+| `$.UserId` | integer | Key casing unverified |
+| `$.UserToken` | string | Key casing unverified |

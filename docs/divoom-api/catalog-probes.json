@@ -1,0 +1,1713 @@
+{
+  "observed_at": "2026-10-14T16:09:37.437593+00:00",
+  "base_url": "https://appin.divoom-gz.com",
+  "headers": {
+    "Content-Type": "application/json",
+    "User-Agent": "Aurabox/3.1.10 (iPad; iOS 14.8; Scale/2.00)"
+  },
+  "auth": "No Token, UserId or Command in any request",
+  "records": [
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "baseline",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2,
+      "item_ids": [
+        4459993,
+        4460039
+      ],
+      "file_sizes": [
+        1
+      ],
+      "file_types": [
+        1
+      ]
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "empty body object",
+      "request": {},
+      "http_status": 200,
+      "return_code": 3,
+      "response_shape": {
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit StartNum",
+      "request": {
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 3,
+      "response_shape": {
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit EndNum",
+      "request": {
+        "StartNum": 1,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 3,
+      "response_shape": {
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit Classify",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit FileSize",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit FileType",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit FileSort",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit Version",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "GetCategoryFileListV2",
+      "case": "omit RefreshIndex",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "PacketFlag": "string",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumListV3",
+      "case": "baseline",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "FileSize": 1,
+        "FileSort": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "AlbumList": {
+          "array_item_shapes": [
+            {
+              "AlbumBigImageId": "string",
+              "AlbumId": "number",
+              "AlbumImageId": "string",
+              "AlbumName": "string",
+              "GalleryCnt": "number",
+              "GalleryList": {
+                "array_item_shapes": [
+                  {
+                    "CommentCnt": "number",
+                    "FileId": "string",
+                    "GalleryId": "number",
+                    "IsLike": "number",
+                    "LikeCnt": "number"
+                  }
+                ]
+              },
+              "LikeCnt": "number"
+            }
+          ]
+        },
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "AlbumList",
+      "count": 2,
+      "item_ids": [
+        112,
+        110
+      ],
+      "file_sizes": [],
+      "file_types": []
+    },
+    {
+      "endpoint": "Discover/GetAlbumListV3",
+      "case": "empty body object",
+      "request": {},
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumListV3",
+      "case": "omit StartNum",
+      "request": {
+        "EndNum": 2,
+        "FileSize": 1,
+        "FileSort": 0
+      },
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumListV3",
+      "case": "omit EndNum",
+      "request": {
+        "StartNum": 1,
+        "FileSize": 1,
+        "FileSort": 0
+      },
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumListV3",
+      "case": "omit FileSize",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "FileSort": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "AlbumList": {
+          "array_item_shapes": [
+            {
+              "AlbumBigImageId": "string",
+              "AlbumId": "number",
+              "AlbumImageId": "string",
+              "AlbumName": "string",
+              "GalleryCnt": "number",
+              "GalleryList": {
+                "array_item_shapes": [
+                  {
+                    "CommentCnt": "number",
+                    "FileId": "string",
+                    "GalleryId": "number",
+                    "IsLike": "number",
+                    "LikeCnt": "number"
+                  }
+                ]
+              },
+              "LikeCnt": "number"
+            }
+          ]
+        },
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "AlbumList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumListV3",
+      "case": "omit FileSort",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "FileSize": 1
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "AlbumList": {
+          "array_item_shapes": [
+            {
+              "AlbumBigImageId": "string",
+              "AlbumId": "number",
+              "AlbumImageId": "string",
+              "AlbumName": "string",
+              "GalleryCnt": "number",
+              "GalleryList": {
+                "array_item_shapes": [
+                  {
+                    "CommentCnt": "number",
+                    "FileId": "string",
+                    "GalleryId": "number",
+                    "IsLike": "number",
+                    "LikeCnt": "number"
+                  }
+                ]
+              },
+              "LikeCnt": "number"
+            }
+          ]
+        },
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "AlbumList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "baseline",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2,
+      "item_ids": [
+        4224013,
+        4223841
+      ],
+      "file_sizes": [
+        1
+      ],
+      "file_types": [
+        1
+      ]
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "empty body object",
+      "request": {},
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit AlbumId",
+      "request": {
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit StartNum",
+      "request": {
+        "AlbumId": 34,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit EndNum",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 1,
+      "response_shape": {
+        "ReturnCode": "number",
+        "ReturnMessage": "string"
+      }
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit Classify",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit FileSize",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit FileType",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileSort": 0,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit FileSort",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "Version": 19,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit Version",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "RefreshIndex": 0
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    },
+    {
+      "endpoint": "Discover/GetAlbumImageListV3",
+      "case": "omit RefreshIndex",
+      "request": {
+        "AlbumId": 34,
+        "StartNum": 1,
+        "EndNum": 2,
+        "Classify": 0,
+        "FileSize": 1,
+        "FileType": 1,
+        "FileSort": 0,
+        "Version": 19
+      },
+      "http_status": 200,
+      "return_code": 0,
+      "response_shape": {
+        "CurListNum": "number",
+        "FileList": {
+          "array_item_shapes": [
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": [
+                  "string"
+                ]
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            },
+            {
+              "AIFlag": "number",
+              "AtList": {
+                "array_item_shapes": []
+              },
+              "CheckConfirm": "number",
+              "Classify": "number",
+              "CommentCnt": "number",
+              "CommentUTC": "number",
+              "Content": "string",
+              "CopyrightFlag": "number",
+              "CountryISOCode": "string",
+              "Date": "number",
+              "FileId": "string",
+              "FileName": "string",
+              "FileSize": "number",
+              "FileTagArray": {
+                "array_item_shapes": []
+              },
+              "FileType": "number",
+              "FileURL": "string",
+              "FillGameIsFinish": "number",
+              "FillGameScore": "number",
+              "GalleryId": "number",
+              "HideFlag": "number",
+              "IsAddNew": "number",
+              "IsAddRecommend": "number",
+              "IsDel": "number",
+              "IsFollow": "number",
+              "IsLike": "number",
+              "LayerFileId": "string",
+              "Level": "number",
+              "LikeCnt": "number",
+              "LikeUTC": "number",
+              "MusicFileId": "string",
+              "OriginalGalleryId": "number",
+              "PixelAmbId": "string",
+              "PixelAmbName": "string",
+              "PrivateFlag": "number",
+              "RegionId": "string",
+              "ShareCnt": "number",
+              "UserHeaderId": "string",
+              "UserId": "number",
+              "UserName": "string",
+              "WatchCnt": "number"
+            }
+          ]
+        },
+        "FileListNum": "number",
+        "ReturnCode": "number",
+        "ReturnMessage": "string",
+        "expire": "number"
+      },
+      "collection": "FileList",
+      "count": 2
+    }
+  ]
+}

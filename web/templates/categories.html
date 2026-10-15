@@ -1,0 +1,14 @@
+{{define "categories"}}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false,"timeout":510000}'>
+<title>DIVOOM · Categories</title><link rel="stylesheet" href="/static/css/style.css"><script src="/static/js/htmx.min.js" defer></script><script src="/static/js/app.js" defer></script></head>
+<body> <main><header>{{template "page-widget" .}}<div class="eyebrow">DIVOOM / ONLINE GALLERY</div><h1>Categories<span>.</span></h1><p>Choose an animation from a category and send it to your display.</p>{{template "page-navigation" "categories"}}</header>
+<section class="toolbar"><form id="filters" hx-get="/categories/animations" hx-trigger="change, submit" hx-target="#animations" hx-sync="this:replace" hx-indicator="#loading">
+<label for="category">Category</label><select id="category" name="category">{{range .Categories}}<option value="{{.ID}}" {{if eq .ID $.Category}}selected{{end}}>{{.Name}}</option>{{end}}</select><button type="submit" class="secondary">Refresh</button></form>
+<form hx-post="/clock" hx-target="#status" hx-sync="#device:drop" hx-disabled-elt="button, .send-button" hx-indicator="#sending"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">Restore clock</button></form></section>
+<div id="device" hidden><div id="status"></div><div id="sending"></div></div>
+<div id="loading" class="htmx-indicator" role="status">Loading category…</div>
+<section id="animations" hx-get="/categories/animations?category={{.Category}}" hx-trigger="load" hx-sync="#filters:replace" hx-indicator="#loading"><p class="empty">Loading animations…</p></section>
+<noscript>Enable JavaScript to load the gallery.</noscript><footer><p>Category contents depend on the DIVOOM gallery and your account. Format 9 animations are supported.</p></footer></main></body></html>{{end}}
+
+

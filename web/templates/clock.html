@@ -1,0 +1,18 @@
+{{define "clock-settings"}}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false,"timeout":510000}'>
+<title>DIVOOM · Clock settings</title><link rel="stylesheet" href="/static/css/style.css"><script src="/static/js/htmx.min.js" defer></script><script src="/static/js/app.js" defer></script><script src="/static/js/clock-previews.js" defer></script></head>
+<body><main><header>{{template "page-widget" .}}<div class="eyebrow">DIVOOM / ONLINE GALLERY</div><h1>Clock settings<span>.</span></h1><p>Choose how the clock appears on your display.</p>{{template "page-navigation" "clock"}}</header>
+<section id="clock-settings" class="automation" aria-label="Clock appearance">{{template "clock-form" .}}</section>
+<div id="status" role="status" aria-live="polite"></div><noscript>Enable JavaScript to configure the clock.</noscript></main></body></html>{{end}}
+
+{{define "clock-form"}}<h2>Appearance</h2>{{if .Available}}
+<form class="clock-form" hx-post="/clock/settings" hx-target="#clock-settings" hx-sync="this:drop" hx-disabled-elt="find button">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<fieldset class="clock-styles"><legend>Clock style</legend><div class="clock-style-grid">{{range .Styles}}<label class="clock-style-card"><input type="radio" name="style" value="{{.}}" {{if eq . $.Settings.Style}}checked{{end}} required><span class="clock-style-content"><svg class="clock-preview" data-style="{{.}}" viewBox="0 0 16 16" aria-hidden="true"></svg><span>Style {{.}}{{if eq . 14}} · No clock{{end}}</span></span></label>{{end}}</div></fieldset>
+<div class="timing-form">
+<label for="clock-color">Color<input id="clock-color" name="color" type="color" required value="{{.Settings.Color}}"></label>
+<button class="secondary">Apply and show clock</button></div></form>
+<p class="automation-hint">Applying settings pauses autoplay and displays the clock. These settings also apply when autoplay restores the clock. Clock settings are saved and restored after service restarts.</p>
+{{else}}<p>Clock settings are unavailable.</p>{{end}}
+{{if .Error}}<p class="rotation-error" role="alert">{{.Error}}</p>{{else if .Saved}}<p class="automation-hint" role="status">Clock settings applied.</p>{{end}}{{end}}

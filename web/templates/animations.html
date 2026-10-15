@@ -1,0 +1,9 @@
+{{define "animations"}}{{if eq .Page 1}}<div class="grid">{{template "animations-batch" .}}</div>{{else}}{{template "animations-batch" .}}{{end}}{{end}}
+
+{{define "animations-batch"}}{{if .Error}}<div class="animations-continuation empty"><p>{{.Error}}</p>{{template "animations-retry" .}}</div>{{else}}
+{{range .Entries}}{{$item := itemToken .}}<article class="card"><form class="card-send" hx-post="/send/{{.ID}}" hx-target="#status" hx-sync="#device:drop" hx-disabled-elt=".send-button, .toolbar button, .automation button" hx-indicator="#sending"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="item" value="{{$item}}"><button type="submit" class="send-button preview" title="Send to device" aria-label="Send to device"><img src="/animations/{{.ID}}?item={{$item}}" width="160" height="160" loading="lazy" alt="{{if .Name}}{{.Name}}{{else}}Animation preview{{end}}"></button></form></article>{{end}}
+{{if .More}}<div class="animations-continuation" hx-get="{{.AnimationsPath}}?{{.QueryKey}}={{.QueryID}}&amp;page={{.Next}}" hx-trigger="revealed once, animations-retry" hx-target="this" hx-swap="outerHTML" hx-sync="#filters:abort" role="status"><p>Loading more animations…</p><button type="button" class="secondary animations-retry" hidden>Retry loading</button></div>{{else}}<div class="animations-continuation empty" role="status">{{if and (eq .Page 1) (not .Entries)}}No compatible animations in this selection.{{else}}All available animations have been loaded.{{end}}</div>{{end}}{{end}}{{end}}
+
+{{define "animations-retry"}}<button type="button" class="secondary" hx-get="{{.AnimationsPath}}?{{.QueryKey}}={{.QueryID}}&amp;page={{.Page}}" hx-target="closest .animations-continuation" hx-swap="outerHTML" {{if eq .Page 1}}hx-select=".grid > *"{{end}} hx-sync="#filters:abort">Retry loading</button>{{end}}
+{{define "status"}}<p>{{.}}</p>{{end}}
+
