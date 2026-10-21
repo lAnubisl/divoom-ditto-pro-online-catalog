@@ -17,6 +17,7 @@ import (
 	"divoom-gallery-client/internal/handlers"
 	"divoom-gallery-client/internal/history"
 	"divoom-gallery-client/internal/media"
+	"divoom-gallery-client/internal/metrics"
 	"divoom-gallery-client/internal/playback"
 	"divoom-gallery-client/internal/rotation"
 	"divoom-gallery-client/internal/settings"
@@ -59,6 +60,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	metricsConfig, err := config.LoadMetrics()
+	if err != nil {
+		return err
+	}
 	defaults := settings.Defaults(0, defaultInterval, defaultDisplayDuration)
 	prefs := settings.New(filepath.Join(dataDir, "settings.json"), defaults)
 	_, err = prefs.Read()
@@ -74,11 +79,19 @@ func run() error {
 		return err
 	}
 	animationSource := source.New(prefs, api, mediaStore)
-	selection := rotation.NewSelector(playbackHistory, animationSource)
-	deviceDisplay := device.New(d)
+	var historyMetrics rotation.Metrics
+	var deviceMetrics device.Metrics
+	if metricsConfig.URL != "" {
+		client := metrics.NewClient(metricsConfig)
+		defer client.Close()
+		historyMetrics = client
+		deviceMetrics = client
+	}
+	deviceDisplay := device.New(d, deviceMetrics)
 	if err := deviceDisplay.Health(ctx); err != nil {
 		return fmt.Errorf("device API health: %w", err)
 	}
+	selection := rotation.NewSelector(playbackHistory, animationSource, historyMetrics)
 	runner := rotation.New(prefs, selection, animationSource, deviceDisplay)
 	commands := playback.New(prefs, runner, animationSource, deviceDisplay)
 	ui := handlers.New(animationSource, api, commands, prefs, runner, int(defaults.SourceID), password)

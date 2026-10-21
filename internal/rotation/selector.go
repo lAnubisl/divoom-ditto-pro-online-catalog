@@ -6,6 +6,7 @@ import (
 	"divoom-gallery-client/internal/gallery"
 	"errors"
 	"fmt"
+	"log"
 )
 
 const HistoryLimit = 1000
@@ -16,12 +17,13 @@ var ErrEmptyGallery = errors.New("gallery has no selectable items")
 type Selector struct {
 	history  History
 	source   PageSource
+	metrics  Metrics
 	previous []string
 	pending  string
 }
 
-func NewSelector(history History, source PageSource) *Selector {
-	return &Selector{history: history, source: source}
+func NewSelector(history History, source PageSource, metrics Metrics) *Selector {
+	return &Selector{history: history, source: source, metrics: metrics}
 }
 
 // Next records the selected candidate. Reject removes it if retrieval or sending
@@ -76,6 +78,7 @@ func (r *Selector) record(ctx context.Context, history []string, item gallery.It
 	if err := r.history.Save(ctx, next); err != nil {
 		return gallery.Item{}, err
 	}
+	r.reportHistorySize(ctx, len(next))
 	r.previous = history
 	r.pending = item.Filename()
 	return item, nil
@@ -88,7 +91,16 @@ func (r *Selector) Reject(ctx context.Context, item gallery.Item) error {
 	if err := r.history.Save(ctx, r.previous); err != nil {
 		return err
 	}
+	r.reportHistorySize(ctx, len(r.previous))
 	r.pending = ""
 	r.previous = nil
 	return nil
+}
+
+func (r *Selector) reportHistorySize(ctx context.Context, size int) {
+	if r.metrics != nil {
+		if err := r.metrics.WriteHistorySize(ctx, size); err != nil {
+			log.Printf("report history size: %v", err)
+		}
+	}
 }

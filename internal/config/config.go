@@ -75,3 +75,23 @@ func LoadWebAddress() (string, error) {
 	}
 	return net.JoinHostPort(host, port), nil
 }
+
+// LoadMetrics disables reporting when no endpoint URL is configured.
+func LoadMetrics() (Metrics, error) {
+	m := Metrics{
+		URL:      strings.TrimSpace(os.Getenv("DIVOOM_METRICS_URL")),
+		Username: os.Getenv("DIVOOM_METRICS_USERNAME"),
+		Password: os.Getenv("DIVOOM_METRICS_PASSWORD"),
+	}
+	if m.URL == "" {
+		return m, nil
+	}
+	if strings.TrimSpace(m.Username) == "" || m.Password == "" || strings.ContainsAny(m.Username, ":\r\n") || strings.ContainsAny(m.Password, "\r\n") {
+		return m, errors.New("set DIVOOM_METRICS_USERNAME and DIVOOM_METRICS_PASSWORD without line breaks; username must not contain a colon")
+	}
+	u, err := url.Parse(m.URL)
+	if err != nil || u.Hostname() == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return m, errors.New("DIVOOM_METRICS_URL must be an HTTP(S) import URL without credentials, query, or fragment")
+	}
+	return m, nil
+}

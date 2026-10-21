@@ -70,6 +70,42 @@ artwork is cached without automatic eviction. For access from another machine,
 set `DIVOOM_WEB_HOST=0.0.0.0` and use the server's address. Use a trusted LAN or an
 HTTPS reverse proxy for remote access.
 
+## Metrics
+
+Set `DIVOOM_METRICS_URL` to enable metrics reporting, with
+`DIVOOM_METRICS_USERNAME` and `DIVOOM_METRICS_PASSWORD` for HTTP Basic
+authentication. There is no default URL. An unset or blank URL disables reporting
+and skips credential validation, even when credentials are set.
+
+The service pushes the `divoom_gallery_history_size` gauge (the number of entries
+in the persisted history array) from the rotation selector after each successful
+history save, including resets, rollbacks, and replacements that keep the same
+size. The selector calls the metrics client directly after saving; startup does
+not send a history sample.
+
+After every successful device API request, the device client pushes
+`divoom_device_api_last_success_timestamp_seconds`, labelled with `method` and
+`path`. Its value is the Unix time in seconds of the successful communication.
+This includes the startup health check, image and animation uploads, and clock
+commands, for both automatic playback and manual actions. Only HTTP 200 responses
+with the expected JSON status count as success; failed requests emit no signal.
+The health check confirms API reachability and authentication, not physical
+device health.
+
+Each metrics request completes or times out before the calling operation
+continues. Failures are logged without failing the history save or device
+command. There is no queue, change tracking, or periodic reporting.
+
+Set the full endpoint URL, for example
+`http://<SERVER-IP-ADDRESS>:8428/api/v1/import/prometheus`, using VictoriaMetrics'
+[Prometheus import API](https://docs.victoriametrics.com/victoriametrics/url-examples/#apiv1importprometheus).
+Use the port, scheme, and path appropriate for your deployment or authentication
+proxy. Basic authentication over HTTP is unencrypted; use it on a trusted LAN or
+configure HTTPS.
+Requests time out after five seconds and do not follow redirects.
+For systemd deployments, add these variables to
+`/etc/divoom-gallery-web/divoom-gallery-web.env` and restart the service.
+
 ## Build
 
 ```sh

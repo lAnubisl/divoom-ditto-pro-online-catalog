@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"image/gif"
+	"log"
 	"net/http"
 	"time"
 )
@@ -24,11 +25,12 @@ type Client struct {
 	http         *http.Client
 	baseURL, key string
 	gate         chan struct{}
+	metrics      Metrics
 }
 
 // New creates a client with a deadline longer than the server operation deadline.
-func New(d config.DeviceAPI) *Client {
-	return &Client{http: httpx.NewClient(requestTimeout), baseURL: d.BaseURL, key: d.APIKey, gate: make(chan struct{}, 1)}
+func New(d config.DeviceAPI, metrics Metrics) *Client {
+	return &Client{http: httpx.NewClient(requestTimeout), baseURL: d.BaseURL, key: d.APIKey, gate: make(chan struct{}, 1), metrics: metrics}
 }
 
 func (d *Client) request(ctx context.Context, method, path string, body []byte, contentType, expected string) error {
@@ -43,6 +45,11 @@ func (d *Client) request(ctx context.Context, method, path string, body []byte, 
 	var result apiResponse
 	if json.Unmarshal(data, &result) != nil || result.Status != expected {
 		return errors.New("unexpected device API success response")
+	}
+	if d.metrics != nil {
+		if err := d.metrics.WriteDeviceAPISuccess(ctx, method, path); err != nil {
+			log.Printf("report device API success: %v", err)
+		}
 	}
 	return nil
 }
