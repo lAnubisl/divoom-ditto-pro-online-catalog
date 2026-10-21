@@ -44,16 +44,16 @@ func Decode(data []byte) ([]byte, error) {
 	delay := minGIFDelay
 	var err error
 	switch data[0] {
-	case 8:
+	case FormatStillImage:
 		if len(data) != 1+bytesPerFrame {
 			return nil, errors.New("invalid still image length")
 		}
 		raw, err = decrypt(data[1:])
-	case 9, 12:
+	case FormatAnimation, FormatScroll:
 		if len(data) < headerSize {
 			return nil, errors.New("truncated artwork header")
 		}
-		if data[0] == 12 && len(data) != headerSize+4*bytesPerFrame {
+		if data[0] == FormatScroll && len(data) != headerSize+4*bytesPerFrame {
 			return nil, errors.New("invalid scrolling image length")
 		}
 		raw, err = decrypt(data[headerSize:])
@@ -62,7 +62,7 @@ func Decode(data []byte) ([]byte, error) {
 		if delay < minGIFDelay {
 			delay = minGIFDelay
 		}
-		if err == nil && data[0] == 12 {
+		if err == nil && data[0] == FormatScroll {
 			raw, err = scrollFrames(raw, data[1])
 		}
 	default:

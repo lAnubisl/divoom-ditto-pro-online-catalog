@@ -22,6 +22,10 @@ Automatic rotation runs in the background while the application is running,
 including when no browser is connected. Manual artwork and clock commands pause
 rotation; resume it through the web interface when ready.
 
+The gallery client checks downloaded format bytes and removes unsupported artwork
+from category and album responses. This requires fetching artwork when listing
+each page. Filtering preserves pagination even when every item on a page is removed.
+
 ## Requirements
 
 - Go 1.23 or later to build or run from source.

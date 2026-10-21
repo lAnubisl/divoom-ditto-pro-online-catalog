@@ -56,7 +56,7 @@ func (a *Adapter) Pages() (func(context.Context, int) ([]gallery.Item, bool, err
 				items = append(items, item)
 			}
 		}
-		return items, len(result.Items) == 0, nil
+		return items, !result.HasMore(), nil
 	}, nil
 }
 
