@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"image/gif"
-	"log"
-	"net/http"
 	"time"
 )
 
@@ -22,34 +20,34 @@ const (
 
 // Client sends media and clock requests to a configured device HTTP API.
 type Client struct {
-	http         *http.Client
-	baseURL, key string
-	gate         chan struct{}
-	metrics      Metrics
+	http *httpx.Client
+	gate chan struct{}
 }
 
 // New creates a client with a deadline longer than the server operation deadline.
-func New(d config.DeviceAPI, metrics Metrics) *Client {
-	return &Client{http: httpx.NewClient(requestTimeout), baseURL: d.BaseURL, key: d.APIKey, gate: make(chan struct{}, 1), metrics: metrics}
+func New(d config.DeviceAPI, metrics httpx.Metrics) *Client {
+	return &Client{
+		http: httpx.NewClient(httpx.Options{
+			BaseURL: d.BaseURL, Timeout: requestTimeout,
+			Headers: map[string]string{"X-Api-Key": d.APIKey},
+			Service: "device", Metrics: metrics,
+		}),
+		gate: make(chan struct{}, 1),
+	}
 }
 
 func (d *Client) request(ctx context.Context, method, path string, body []byte, contentType, expected string) error {
-	headers := map[string]string{"X-Api-Key": d.key}
+	headers := make(map[string]string)
 	if contentType != "" {
 		headers["Content-Type"] = contentType
 	}
-	data, err := httpx.Fetch(ctx, d.http, method, d.baseURL+path, bytes.NewReader(body), headers, maxResponseSize)
+	data, err := d.http.Fetch(ctx, httpx.Request{Method: method, Path: path, Body: bytes.NewReader(body), Headers: headers, Limit: maxResponseSize})
 	if err != nil {
 		return err
 	}
 	var result apiResponse
 	if json.Unmarshal(data, &result) != nil || result.Status != expected {
 		return errors.New("unexpected device API success response")
-	}
-	if d.metrics != nil {
-		if err := d.metrics.WriteDeviceAPISuccess(ctx, method, path); err != nil {
-			log.Printf("report device API success: %v", err)
-		}
 	}
 	return nil
 }

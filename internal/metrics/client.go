@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"context"
-	"errors"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,18 +12,25 @@ import (
 	"divoom-gallery-client/internal/httpx"
 )
 
-// Client owns VictoriaMetrics request encoding, authentication, and transport.
+// Client encodes VictoriaMetrics samples and delivers them through the shared HTTP client.
 type Client struct {
-	settings config.Metrics
-	http     *http.Client
+	http *httpx.Client
 }
 
 func NewClient(settings config.Metrics) *Client {
-	return &Client{settings: settings, http: httpx.NewClient(5 * time.Second)}
+	return &Client{http: httpx.NewClient(httpx.Options{
+		BaseURL: settings.URL, Timeout: 5 * time.Second,
+		Headers: map[string]string{
+			"Content-Type":  "text/plain; version=0.0.4",
+			"Authorization": "Basic " + base64.StdEncoding.EncodeToString([]byte(settings.Username+":"+settings.Password)),
+		},
+		AcceptStatus: func(status int) bool { return status >= 200 && status < 300 },
+		// Telemetry is disabled for metrics delivery to avoid recursive reporting.
+	})}
 }
 
 func (c *Client) Close() {
-	c.http.CloseIdleConnections()
+	c.http.Close()
 }
 
 func (c *Client) WriteHistorySize(ctx context.Context, size int) error {
@@ -32,31 +39,21 @@ func (c *Client) WriteHistorySize(ctx context.Context, size int) error {
 	return c.write(ctx, body)
 }
 
-// WriteDeviceAPISuccess emits a signal for a validated successful device request.
-// A timestamp gauge allows consumers to check how recently communication succeeded.
-func (c *Client) WriteDeviceAPISuccess(ctx context.Context, method, path string) error {
-	now := time.Now()
-	body := fmt.Sprintf("# TYPE divoom_device_api_last_success_timestamp_seconds gauge\ndivoom_device_api_last_success_timestamp_seconds{method=%q,path=%q} %.3f %d\n", method, path, float64(now.UnixMilli())/1000, now.UnixMilli())
+// WriteHTTPRequestDuration pushes one duration sample per completed HTTP attempt.
+func (c *Client) WriteHTTPRequestDuration(ctx context.Context, timing httpx.RequestTiming) error {
+	outcome := "error"
+	if timing.Success {
+		outcome = "success"
+	}
+	body := fmt.Sprintf("# TYPE divoom_http_request_duration_seconds gauge\ndivoom_http_request_duration_seconds{service=%q,method=%q,path=%q,status_code=%q,outcome=%q} %.9f %d\n",
+		timing.Service, timing.Method, timing.Path, fmt.Sprint(timing.StatusCode), outcome, timing.Duration.Seconds(), time.Now().UnixMilli())
 	return c.write(ctx, body)
 }
 
 func (c *Client) write(ctx context.Context, body string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.settings.URL, strings.NewReader(body))
+	_, err := c.http.Fetch(ctx, httpx.Request{Method: http.MethodPost, Body: strings.NewReader(body), Limit: 64 * 1024})
 	if err != nil {
-		return errors.New("invalid metrics HTTP request")
-	}
-	req.Header.Set("Content-Type", "text/plain; version=0.0.4")
-	req.SetBasicAuth(c.settings.Username, c.settings.Password)
-	resp, err := c.http.Do(req)
-	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		return errors.New("metrics HTTP network error or timeout")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("metrics HTTP status %d", resp.StatusCode)
+		return fmt.Errorf("metrics: %w", err)
 	}
 	return nil
 }

@@ -16,6 +16,7 @@ import (
 	"divoom-gallery-client/internal/gallery"
 	"divoom-gallery-client/internal/handlers"
 	"divoom-gallery-client/internal/history"
+	"divoom-gallery-client/internal/httpx"
 	"divoom-gallery-client/internal/media"
 	"divoom-gallery-client/internal/metrics"
 	"divoom-gallery-client/internal/playback"
@@ -49,7 +50,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	api := gallery.New(gallery.Options{Email: account.Email, Password: account.Password})
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	password, err := config.LoadWebPassword()
@@ -78,16 +78,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	animationSource := source.New(prefs, api, mediaStore)
 	var historyMetrics rotation.Metrics
-	var deviceMetrics device.Metrics
+	var requestMetrics httpx.Metrics
 	if metricsConfig.URL != "" {
 		client := metrics.NewClient(metricsConfig)
 		defer client.Close()
 		historyMetrics = client
-		deviceMetrics = client
+		requestMetrics = client
 	}
-	deviceDisplay := device.New(d, deviceMetrics)
+	api := gallery.New(gallery.Options{Email: account.Email, Password: account.Password, Metrics: requestMetrics})
+	animationSource := source.New(prefs, api, mediaStore)
+	deviceDisplay := device.New(d, requestMetrics)
 	if err := deviceDisplay.Health(ctx); err != nil {
 		return fmt.Errorf("device API health: %w", err)
 	}

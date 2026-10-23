@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -27,8 +26,7 @@ const maxResponseSize = 2 * 1024 * 1024
 // without knowing about local files, playback history, rotation, or web pages.
 type Client struct {
 	mu              sync.Mutex
-	http            *http.Client
-	apiURL, fileURL string
+	api, files      *httpx.Client
 	email, password string
 	token, userID   json.RawMessage
 }
@@ -41,7 +39,14 @@ func New(options Options) *Client {
 	if fileURL == "" {
 		fileURL = "https://fin.divoom-gz.com"
 	}
-	return &Client{http: httpx.NewClient(30 * time.Second), apiURL: strings.TrimRight(apiURL, "/"), fileURL: strings.TrimRight(fileURL, "/"), email: options.Email, password: options.Password}
+	newHTTPClient := func(baseURL string) *httpx.Client {
+		return httpx.NewClient(httpx.Options{
+			BaseURL: baseURL, Timeout: 30 * time.Second,
+			Headers: map[string]string{"User-Agent": galleryAgent},
+			Service: "gallery", Metrics: options.Metrics,
+		})
+	}
+	return &Client{api: newHTTPClient(apiURL), files: newHTTPClient(fileURL), email: options.Email, password: options.Password}
 }
 
 func (c *Client) FetchCategoryPage(ctx context.Context, category, page int) (Page, error) {
@@ -95,7 +100,10 @@ func (c *Client) FetchItem(ctx context.Context, item Item) ([]byte, error) {
 	if err != nil || item.FileID == "" || p.IsAbs() || p.Host != "" || p.RawQuery != "" || p.Fragment != "" || strings.Contains(p.Path, "..") || strings.Contains(p.Path, "\\") {
 		return nil, errors.New("invalid gallery file path")
 	}
-	return httpx.Fetch(ctx, c.http, "GET", c.fileURL+"/"+strings.TrimLeft(p.EscapedPath(), "/"), nil, map[string]string{"User-Agent": galleryAgent}, media.MaxArtworkSize)
+	return c.files.Fetch(ctx, httpx.Request{
+		Method: "GET", Path: "/" + strings.TrimLeft(p.EscapedPath(), "/"),
+		MetricPath: "/artwork", Limit: media.MaxArtworkSize,
+	})
 }
 
 func (c *Client) ListAlbums(ctx context.Context) ([]Album, error) {
@@ -179,7 +187,10 @@ func (c *Client) requestOnce(ctx context.Context, path string, payload map[strin
 	if err != nil {
 		return errors.New("invalid gallery request")
 	}
-	data, err := httpx.Fetch(ctx, c.http, "POST", c.apiURL+path, bytes.NewReader(body), map[string]string{"Content-Type": "application/json", "User-Agent": galleryAgent}, maxResponseSize)
+	data, err := c.api.Fetch(ctx, httpx.Request{
+		Method: "POST", Path: path, Body: bytes.NewReader(body),
+		Headers: map[string]string{"Content-Type": "application/json"}, Limit: maxResponseSize,
+	})
 	if err != nil {
 		return err
 	}

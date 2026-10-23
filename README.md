@@ -87,18 +87,31 @@ history save, including resets, rollbacks, and replacements that keep the same
 size. The selector calls the metrics client directly after saving; startup does
 not send a history sample.
 
-After every successful device API request, the device client pushes
-`divoom_device_api_last_success_timestamp_seconds`, labelled with `method` and
-`path`. Its value is the Unix time in seconds of the successful communication.
-This includes the startup health check, image and animation uploads, and clock
-commands, for both automatic playback and manual actions. Only HTTP 200 responses
-with the expected JSON status count as success; failed requests emit no signal.
-The health check confirms API reachability and authentication, not physical
-device health.
+Every outbound gallery and device HTTP attempt also pushes the
+`divoom_http_request_duration_seconds` gauge. Labels identify `service`
+(`gallery` or `device`), `method`, `path`, `status_code`, and `outcome`
+(`success` or `error`). Gallery login, session renewal retries, category and album
+requests, and artwork downloads are included, as are all device endpoints.
+Artwork downloads share the `/artwork` path label to avoid a separate series for
+every file. Labels contain no credentials, query strings, or full URLs.
+
+The shared `internal/httpx.Client` executes HTTP requests and owns their timing
+and telemetry reporting. Gallery and device clients configure it once and pass
+operation details; they handle API payloads and response validation. Metrics
+delivery uses the same helper with telemetry disabled to prevent recursion.
+
+Durations use seconds and cover HTTP execution through reading and closing the
+bounded response body. They exclude local work, waiting for the gallery or device
+lock, and metrics delivery. Each attempt sends a sample, including HTTP errors,
+network failures, timeouts, and cancellations. A `status_code` of `0` means no
+HTTP response was received. The outcome describes the HTTP exchange; application
+JSON validation happens afterward. This gauge records individual execution
+times, rather than cumulative histogram buckets. Metrics delivery uses its own
+five-second timeout even when the original request was cancelled.
 
 Each metrics request completes or times out before the calling operation
-continues. Failures are logged without failing the history save or device
-command. There is no queue, change tracking, or periodic reporting.
+continues. Failures are logged without failing the history save, gallery request,
+or device command. There is no queue, change tracking, or periodic reporting.
 
 Set the full endpoint URL, for example
 `http://<SERVER-IP-ADDRESS>:8428/api/v1/import/prometheus`, using VictoriaMetrics'
