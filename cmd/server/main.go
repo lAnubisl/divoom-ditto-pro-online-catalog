@@ -75,15 +75,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	playbackHistory, err := history.New(filepath.Join(dataDir, "history.json"))
-	if err != nil {
-		return err
-	}
 	skippedItems, err := skipped.New(filepath.Join(dataDir, "skipped.json"))
 	if err != nil {
 		return err
 	}
-	var historyMetrics rotation.Metrics
+	var historyMetrics history.Metrics
 	var requestMetrics httpx.Metrics
 	if metricsConfig.URL != "" {
 		client := metrics.NewClient(metricsConfig)
@@ -91,14 +87,17 @@ func run() error {
 		historyMetrics = client
 		requestMetrics = client
 	}
+	playbackHistory, err := history.New(filepath.Join(dataDir, "history.json"), historyMetrics)
+	if err != nil {
+		return err
+	}
 	api := gallery.New(gallery.Options{Email: account.Email, Password: account.Password, Metrics: requestMetrics})
 	animationSource := source.New(prefs, api, mediaStore, skippedItems)
 	deviceDisplay := device.New(d, requestMetrics)
 	if err := deviceDisplay.Health(ctx); err != nil {
 		return fmt.Errorf("device API health: %w", err)
 	}
-	selection := rotation.NewSelector(playbackHistory, animationSource, historyMetrics)
-	runner := rotation.New(prefs, selection, animationSource, deviceDisplay)
+	runner := rotation.New(prefs, playbackHistory, animationSource, deviceDisplay)
 	commands := playback.New(prefs, runner, animationSource, deviceDisplay)
 	ui := handlers.New(animationSource, api, commands, prefs, runner, int(defaults.SourceID), password)
 	return serveWeb(ctx, listen, ui, runner)

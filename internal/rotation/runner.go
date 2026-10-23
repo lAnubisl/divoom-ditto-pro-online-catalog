@@ -1,4 +1,4 @@
-// Package rotation coordinates automatic playback and its schedule.
+// Package rotation coordinates automatic playback, candidate selection, and history.
 package rotation
 
 import (
@@ -13,16 +13,17 @@ import (
 	"time"
 )
 
+var ErrEmptyGallery = errors.New("gallery has no selectable items")
+
 type Runner struct {
 	settings      *settings.Store
-	selection     Selection
+	history       History
 	source        Source
 	display       Display
 	mu            sync.Mutex
 	changed       chan struct{}
 	next          time.Time
-	version       uint64
-	started       bool
+	rescheduled   bool
 	running       bool
 	lastError     string
 	halted        bool
@@ -31,8 +32,8 @@ type Runner struct {
 	restoreCancel context.CancelFunc
 }
 
-func New(prefs *settings.Store, selection Selection, source Source, display Display) *Runner {
-	return &Runner{settings: prefs, selection: selection, source: source, display: display, changed: make(chan struct{}, 1), next: time.Now()}
+func New(prefs *settings.Store, history History, source Source, display Display) *Runner {
+	return &Runner{settings: prefs, history: history, source: source, display: display, changed: make(chan struct{}, 1), next: time.Now()}
 }
 
 func (r *Runner) State() State {
@@ -47,7 +48,7 @@ func (r *Runner) Changed(immediate, takeover bool) {
 	r.mu.Lock()
 	if immediate {
 		r.next = time.Now()
-		r.version++
+		r.rescheduled = true
 		r.lastError = ""
 		r.halted = false
 	}
@@ -103,6 +104,40 @@ func (r *Runner) restoreClock() error {
 	return nil
 }
 
+// selectNext finds the first unplayed item, or restarts an exhausted source.
+// Selection does not change history; only successful sends are recorded.
+func (r *Runner) selectNext(ctx context.Context) (gallery.Item, error) {
+	pages, err := r.source.Pages()
+	if err != nil {
+		return gallery.Item{}, err
+	}
+	var first gallery.Item
+	for page := 1; ; page++ {
+		if err := ctx.Err(); err != nil {
+			return gallery.Item{}, err
+		}
+		items, end, err := pages(ctx, page)
+		if err != nil {
+			return gallery.Item{}, fmt.Errorf("gallery page %d: %w", page, err)
+		}
+		for _, item := range items {
+			if first.ID == 0 {
+				first = item
+			}
+			if !r.history.Contains(item.Filename()) {
+				return item, nil
+			}
+		}
+		if end {
+			break
+		}
+	}
+	if first.ID == 0 {
+		return gallery.Item{}, ErrEmptyGallery
+	}
+	return first, nil
+}
+
 // nextAnimation learns unsupported IDs and immediately tries the next candidate.
 // Failed retrieval never counts as playback history, including skipped artwork.
 func (r *Runner) nextAnimation(ctx context.Context) (gallery.Item, []byte, error) {
@@ -110,19 +145,13 @@ func (r *Runner) nextAnimation(ctx context.Context) (gallery.Item, []byte, error
 		if err := ctx.Err(); err != nil {
 			return gallery.Item{}, nil, err
 		}
-		item, err := r.selection.Next(ctx)
+		item, err := r.selectNext(ctx)
 		if err != nil {
 			return gallery.Item{}, nil, fmt.Errorf("select animation: %w", err)
 		}
 		data, err := r.source.Animation(ctx, item)
 		if err == nil {
 			return item, data, nil
-		}
-		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		rejectErr := r.selection.Reject(cleanup, item)
-		cancel()
-		if rejectErr != nil {
-			return gallery.Item{}, nil, errors.Join(fmt.Errorf("load animation: %w", err), fmt.Errorf("revert playback history: %w", rejectErr))
 		}
 		if !errors.Is(err, animation.ErrUnsupportedFormat) {
 			return gallery.Item{}, nil, fmt.Errorf("load animation: %w", err)
@@ -140,16 +169,6 @@ func (r *Runner) cycle(ctx context.Context, duration time.Duration) (err error) 
 	if err != nil {
 		return err
 	}
-	sent := false
-	defer func() {
-		if !sent {
-			cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if historyErr := r.selection.Reject(cleanup, item); historyErr != nil {
-				log.Printf("revert playback history: %v", historyErr)
-			}
-		}
-	}()
 	// This check prevents cancelled source work from starting a device request.
 	if err := ctx.Err(); err != nil {
 		return err
@@ -162,22 +181,23 @@ func (r *Runner) cycle(ctx context.Context, duration time.Duration) (err error) 
 	if err := r.display.SendAnimation(ctx, data); err != nil {
 		return fmt.Errorf("animation upload: %w", err)
 	}
-	sent = true
+	// A completed send belongs in history even if a pause cancelled the cycle.
+	historyCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	err = r.history.Record(historyCtx, item.Filename())
+	cancel()
+	if err != nil {
+		return fmt.Errorf("save playback history: %w", err)
+	}
 	log.Printf("Animation %s send completed; returning to clock in %s.", item.Filename(), duration)
 	return wait(ctx, duration)
 }
 
+// Start launches the scheduler and returns a channel closed when it exits.
+// The application must call Start once, during startup.
 func (r *Runner) Start(ctx context.Context) (<-chan struct{}, error) {
 	if _, err := r.settings.Read(); err != nil {
 		return nil, err
 	}
-	r.mu.Lock()
-	if r.started {
-		r.mu.Unlock()
-		return nil, errors.New("automatic scheduler already started")
-	}
-	r.started = true
-	r.mu.Unlock()
 	done := make(chan struct{})
 	go func() { defer close(done); r.run(ctx) }()
 	return done, nil
@@ -224,7 +244,8 @@ func (r *Runner) run(ctx context.Context) {
 		}
 		interval, duration := prefs.Timing()
 		next = r.next
-		version := r.version
+		// Track immediate schedule changes made while this cycle is running.
+		r.rescheduled = false
 		cycleCtx, cancel := context.WithCancel(ctx)
 		r.cancel = cancel
 		r.takeover = false
@@ -244,11 +265,11 @@ func (r *Runner) run(ctx context.Context) {
 			}
 			r.lastError = "Could not restore the clock. Autoplay has stopped; check the device."
 		} else if err != nil && !cancelled {
-			r.lastError = "Automatic send failed. We will retry in the next cycle."
+			r.lastError = "Automatic playback failed. We will retry in the next cycle."
 		} else if err == nil {
 			r.lastError = ""
 		}
-		if r.version == version {
+		if !r.rescheduled {
 			r.next = next.Add(interval)
 			for !r.next.After(time.Now()) {
 				r.next = r.next.Add(interval)

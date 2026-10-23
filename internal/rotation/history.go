@@ -1,10 +1,9 @@
 package rotation
 
-import (
-	"context"
-)
+import "context"
 
+// History tracks successfully sent animations independently of persistence.
 type History interface {
-	Load(context.Context) ([]string, error)
-	Save(context.Context, []string) error
+	Contains(string) bool
+	Record(context.Context, string) error
 }
