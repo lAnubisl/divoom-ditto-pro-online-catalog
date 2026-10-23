@@ -22,9 +22,16 @@ Automatic rotation runs in the background while the application is running,
 including when no browser is connected. Manual artwork and clock commands pause
 rotation; resume it through the web interface when ready.
 
-The gallery client checks downloaded format bytes and removes unsupported artwork
-from category and album responses. This requires fetching artwork when listing
-each page. Filtering preserves pagination even when every item on a page is removed.
+Gallery lists load metadata without downloading artwork for format checks.
+Artwork is downloaded and decoded when needed for a preview or playback, and
+successful conversions are cached on disk. Unsupported encodings discovered
+during loading are recorded as gallery IDs in `DATA_DIR/skipped.json`, a JSON
+array such as `[4203677,4223443]`. Rotation excludes these IDs across categories,
+albums, restarts, and playback-history resets, and immediately tries another item
+when it discovers an unsupported encoding. Preview requests also reuse this list
+to avoid repeated downloads. Network failures and malformed files with recognized
+encodings are not added. Stop the app and remove an ID (or clear the array) to
+retry it after decoder support changes.
 
 ## Requirements
 

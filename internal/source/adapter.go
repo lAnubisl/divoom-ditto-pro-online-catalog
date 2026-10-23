@@ -7,6 +7,7 @@ import (
 	"divoom-gallery-client/internal/gallery"
 	"divoom-gallery-client/internal/media"
 	"divoom-gallery-client/internal/settings"
+	"divoom-gallery-client/internal/skipped"
 	"errors"
 	"fmt"
 )
@@ -15,11 +16,12 @@ type Adapter struct {
 	settings *settings.Store
 	api      API
 	media    *media.Store
+	skipped  *skipped.Store
 	gate     chan struct{}
 }
 
-func New(prefs *settings.Store, api API, media *media.Store) *Adapter {
-	return &Adapter{settings: prefs, api: api, media: media, gate: make(chan struct{}, 1)}
+func New(prefs *settings.Store, api API, media *media.Store, skipped *skipped.Store) *Adapter {
+	return &Adapter{settings: prefs, api: api, media: media, skipped: skipped, gate: make(chan struct{}, 1)}
 }
 
 func (a *Adapter) acquire(ctx context.Context) error {
@@ -32,8 +34,8 @@ func (a *Adapter) acquire(ctx context.Context) error {
 }
 
 // Pages captures the configured source for one rotation decision. The returned
-// function supplies supported items and reports the end of the remote source
-// separately, so a page of unsupported items does not end traversal.
+// function filters metadata and known unsupported IDs without downloading files.
+// The original page boundary is preserved even if every item is skipped.
 func (a *Adapter) Pages() (func(context.Context, int) ([]gallery.Item, bool, error), error) {
 	prefs, err := a.settings.Read()
 	if err != nil {
@@ -52,7 +54,7 @@ func (a *Adapter) Pages() (func(context.Context, int) ([]gallery.Item, bool, err
 		}
 		items := make([]gallery.Item, 0, len(result.Items))
 		for _, item := range result.Items {
-			if item.Selectable(prefs.Source == "album") {
+			if item.Selectable(prefs.Source == "album") && !a.skipped.Contains(item.ID) {
 				items = append(items, item)
 			}
 		}
@@ -71,6 +73,9 @@ func (a *Adapter) Animation(ctx context.Context, item gallery.Item) ([]byte, err
 		return nil, err
 	}
 	defer func() { <-a.gate }()
+	if a.skipped.Contains(item.ID) {
+		return nil, animation.ErrUnsupportedFormat
+	}
 	if data, ok := a.media.Load(ctx, item.ID); ok {
 		return data, nil
 	}
@@ -80,6 +85,11 @@ func (a *Adapter) Animation(ctx context.Context, item gallery.Item) ([]byte, err
 	}
 	data, err := animation.Decode(raw)
 	if err != nil {
+		if errors.Is(err, animation.ErrUnsupportedFormat) {
+			if saveErr := a.skipped.Add(ctx, item.ID); saveErr != nil {
+				return nil, fmt.Errorf("save skipped artwork: %w", saveErr)
+			}
+		}
 		format := -1
 		if len(raw) > 0 {
 			format = int(raw[0])

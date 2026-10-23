@@ -22,6 +22,7 @@ import (
 	"divoom-gallery-client/internal/playback"
 	"divoom-gallery-client/internal/rotation"
 	"divoom-gallery-client/internal/settings"
+	"divoom-gallery-client/internal/skipped"
 	"divoom-gallery-client/internal/source"
 )
 
@@ -78,6 +79,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	skippedItems, err := skipped.New(filepath.Join(dataDir, "skipped.json"))
+	if err != nil {
+		return err
+	}
 	var historyMetrics rotation.Metrics
 	var requestMetrics httpx.Metrics
 	if metricsConfig.URL != "" {
@@ -87,7 +92,7 @@ func run() error {
 		requestMetrics = client
 	}
 	api := gallery.New(gallery.Options{Email: account.Email, Password: account.Password, Metrics: requestMetrics})
-	animationSource := source.New(prefs, api, mediaStore)
+	animationSource := source.New(prefs, api, mediaStore, skippedItems)
 	deviceDisplay := device.New(d, requestMetrics)
 	if err := deviceDisplay.Health(ctx); err != nil {
 		return fmt.Errorf("device API health: %w", err)

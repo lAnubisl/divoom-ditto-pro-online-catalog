@@ -66,7 +66,7 @@ func Decode(data []byte) ([]byte, error) {
 			raw, err = scrollFrames(raw, data[1])
 		}
 	default:
-		return nil, errors.New("unsupported artwork format (expected 16x16 format 8, 9, or 12)")
+		return nil, ErrUnsupportedFormat
 	}
 	if err != nil {
 		return nil, err

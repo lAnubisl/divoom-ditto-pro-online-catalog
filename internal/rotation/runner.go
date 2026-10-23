@@ -3,6 +3,8 @@ package rotation
 
 import (
 	"context"
+	"divoom-gallery-client/internal/animation"
+	"divoom-gallery-client/internal/gallery"
 	"divoom-gallery-client/internal/settings"
 	"errors"
 	"fmt"
@@ -101,14 +103,42 @@ func (r *Runner) restoreClock() error {
 	return nil
 }
 
+// nextAnimation learns unsupported IDs and immediately tries the next candidate.
+// Failed retrieval never counts as playback history, including skipped artwork.
+func (r *Runner) nextAnimation(ctx context.Context) (gallery.Item, []byte, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return gallery.Item{}, nil, err
+		}
+		item, err := r.selection.Next(ctx)
+		if err != nil {
+			return gallery.Item{}, nil, fmt.Errorf("select animation: %w", err)
+		}
+		data, err := r.source.Animation(ctx, item)
+		if err == nil {
+			return item, data, nil
+		}
+		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		rejectErr := r.selection.Reject(cleanup, item)
+		cancel()
+		if rejectErr != nil {
+			return gallery.Item{}, nil, errors.Join(fmt.Errorf("load animation: %w", err), fmt.Errorf("revert playback history: %w", rejectErr))
+		}
+		if !errors.Is(err, animation.ErrUnsupportedFormat) {
+			return gallery.Item{}, nil, fmt.Errorf("load animation: %w", err)
+		}
+		log.Printf("Skipping animation %d: unsupported artwork format.", item.ID)
+	}
+}
+
 func (r *Runner) cycle(ctx context.Context, duration time.Duration) (err error) {
 	if err := r.display.Lock(ctx); err != nil {
 		return err
 	}
 	defer r.display.Unlock()
-	item, err := r.selection.Next(ctx)
+	item, data, err := r.nextAnimation(ctx)
 	if err != nil {
-		return fmt.Errorf("select animation: %w", err)
+		return err
 	}
 	sent := false
 	defer func() {
@@ -120,10 +150,6 @@ func (r *Runner) cycle(ctx context.Context, duration time.Duration) (err error) 
 			}
 		}
 	}()
-	data, err := r.source.Animation(ctx, item)
-	if err != nil {
-		return fmt.Errorf("load animation: %w", err)
-	}
 	// This check prevents cancelled source work from starting a device request.
 	if err := ctx.Err(); err != nil {
 		return err

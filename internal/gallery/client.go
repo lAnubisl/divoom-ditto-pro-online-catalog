@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"divoom-gallery-client/internal/animation"
 	"divoom-gallery-client/internal/httpx"
 	"divoom-gallery-client/internal/media"
 )
@@ -79,19 +78,7 @@ func (c *Client) fetchPage(ctx context.Context, path string, payload map[string]
 	if result.Items == nil {
 		return Page{}, errors.New("gallery response omitted FileList")
 	}
-	items := make([]Item, 0, len(result.Items))
-	for _, item := range result.Items {
-		data, err := c.FetchItem(ctx, item)
-		if err != nil {
-			return Page{}, err
-		}
-		// FileType describes the gallery category, not the binary encoding.
-		// Only downloaded artwork exposes the actual format byte.
-		if len(data) > 0 && animation.SupportsFormat(data[0]) {
-			items = append(items, item)
-		}
-	}
-	return Page{Items: items, more: len(result.Items) > 0}, nil
+	return Page{Items: result.Items, more: len(result.Items) > 0}, nil
 }
 
 // FetchItem returns the original artwork bytes for an item returned by a page.
