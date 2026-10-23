@@ -86,12 +86,15 @@ func TestCloseFlushesSamplesAndRejectsFurtherWrites(t *testing.T) {
 	client.Close()
 	mu.Lock()
 	defer mu.Unlock()
-	if len(bodies) != 2 {
-		t.Fatalf("close delivered %d samples, want 2", len(bodies))
+	if len(bodies) != 3 {
+		t.Fatalf("close delivered %d requests, want 3", len(bodies))
 	}
 	if !strings.Contains(bodies[0], "divoom_gallery_history_size 7 ") ||
 		!strings.Contains(bodies[1], `service="gallery",method="GET",path="/artwork",status_code="200",outcome="success"} 0.250000000 `) {
 		t.Fatalf("unexpected samples: %q", bodies)
+	}
+	if !strings.Contains(bodies[2], `divoom_http_requests_per_minute{service="gallery",method="GET",path="/artwork"} 1 `) {
+		t.Fatalf("missing shutdown request count: %q", bodies[2])
 	}
 	if err := client.WriteHistorySize(context.Background(), 8); err == nil {
 		t.Fatal("closed client accepted a sample")
@@ -145,4 +148,95 @@ func TestConcurrentCloseAndReporting(t *testing.T) {
 		}()
 	}
 	workers.Wait()
+}
+
+func TestRequestCountsGroupAndReset(t *testing.T) {
+	received := make(chan string, 3)
+	var bodies []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		received <- string(body)
+	}))
+	defer server.Close()
+	// Exercise window processing directly without waiting a minute or running
+	// the duration worker. Delivery still uses the real HTTP metrics transport.
+	client := &Client{
+		http:  httpx.NewClient(httpx.Options{BaseURL: server.URL, Timeout: time.Second}),
+		queue: make(chan string, queueSize), requests: make(map[requestKey]uint64),
+	}
+	defer client.http.Close()
+	report := func(service, method, path string, success bool) {
+		t.Helper()
+		if err := client.WriteHTTPRequestDuration(context.Background(), httpx.RequestTiming{
+			Service: service, Method: method, Path: path, Success: success,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := 0; i < 5; i++ {
+		report("device", "GET", "/animation", i != 0)
+	}
+	report("device", "POST", "/animation", true)
+	report("device", "GET", "/clock", true)
+	report("gallery", "GET", "/animation", true)
+	if len(received) != 0 {
+		t.Fatal("counts sent before window processing")
+	}
+	client.flushRequestCounts(context.Background())
+	select {
+	case body := <-received:
+		bodies = append(bodies, body)
+	case <-time.After(time.Second):
+		t.Fatal("count batch was not delivered")
+	}
+	if len(bodies) != 1 {
+		t.Fatalf("sent %d batches, want 1", len(bodies))
+	}
+	for _, want := range []string{
+		`service="device",method="GET",path="/animation"} 5 `,
+		`service="device",method="POST",path="/animation"} 1 `,
+		`service="device",method="GET",path="/clock"} 1 `,
+		`service="gallery",method="GET",path="/animation"} 1 `,
+	} {
+		if !strings.Contains(bodies[0], want) {
+			t.Fatalf("missing %q in %q", want, bodies[0])
+		}
+	}
+	client.flushRequestCounts(context.Background())
+	if len(received) != 0 {
+		t.Fatal("empty window sent a batch")
+	}
+	report("device", "GET", "/animation", true)
+	client.flushRequestCounts(context.Background())
+	select {
+	case body := <-received:
+		bodies = append(bodies, body)
+	case <-time.After(time.Second):
+		t.Fatal("next count batch was not delivered")
+	}
+	if len(bodies) != 2 || !strings.Contains(bodies[1], `service="device",method="GET",path="/animation"} 1 `) {
+		t.Fatalf("new window did not reset count: %q", bodies)
+	}
+}
+
+func TestRequestCountsSurviveFullDurationQueue(t *testing.T) {
+	client := &Client{queue: make(chan string, 1), requests: make(map[requestKey]uint64)}
+	timing := httpx.RequestTiming{Service: "device", Method: "GET", Path: "/animation"}
+	if err := client.WriteHTTPRequestDuration(context.Background(), timing); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.WriteHTTPRequestDuration(context.Background(), timing); err == nil {
+		t.Fatal("expected full queue")
+	}
+	key := requestKey{"device", "GET", "/animation"}
+	if client.requests[key] != 2 {
+		t.Fatalf("count=%d want 2", client.requests[key])
+	}
+	client.closed = true
+	if err := client.WriteHTTPRequestDuration(context.Background(), timing); err == nil {
+		t.Fatal("closed client accepted report")
+	}
+	if client.requests[key] != 2 {
+		t.Fatal("closed client changed count")
+	}
 }

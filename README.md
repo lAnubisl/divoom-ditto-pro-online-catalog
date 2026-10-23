@@ -95,7 +95,7 @@ and skips credential validation, even when credentials are set.
 The service pushes the `divoom_gallery_history_size` gauge (the number of entries
 in the persisted history array) from the history store after each successful
 history save following a completed automatic send, including source restarts
-and replacements that keep the same size. The runner queues a sample after
+and replacements that keep the same size. The history store queues a sample after
 saving; startup does not send a history sample.
 
 Every outbound gallery and device HTTP attempt also pushes the
@@ -126,7 +126,16 @@ delivery. The queue holds up to 256 pending samples; when full, new samples are
 dropped and the failure is logged. Delivery failures are also logged, without
 retries or failing the original operation. Shutdown allows up to five seconds to
 flush pending samples before cancelling delivery and discarding the remainder.
-There is no change tracking or periodic reporting.
+HTTP attempts also accumulate in a map grouped by `service`, `method`, and
+`path`. Once per minute, the worker swaps the map and sends all groups in one
+request as the `divoom_http_requests_per_minute` gauge. For example,
+`{service="device",method="GET",path="/animation"} 5` means five attempts during
+the preceding reporting window, including failures. Counts use the same normalized
+paths as durations and include attempts whose duration samples were dropped by a
+full queue. Empty windows send no count samples. Counts reset each window; failed
+count deliveries are logged without retries. Shutdown also flushes the final
+partial window within the existing five-second limit. Duration and history
+samples continue to send immediately through the 256-entry queue.
 
 Set the full endpoint URL, for example
 `http://<SERVER-IP-ADDRESS>:8428/api/v1/import/prometheus`, using VictoriaMetrics'

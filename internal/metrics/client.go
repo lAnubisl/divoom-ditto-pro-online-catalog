@@ -17,6 +17,11 @@ import (
 
 const queueSize = 256
 
+// requestKey uses the same endpoint labels as duration samples.
+type requestKey struct {
+	service, method, path string
+}
+
 // Client queues VictoriaMetrics samples for delivery by a single background worker.
 type Client struct {
 	http      *httpx.Client
@@ -24,13 +29,14 @@ type Client struct {
 	done      chan struct{}
 	cancel    context.CancelFunc
 	mu        sync.Mutex
+	requests  map[requestKey]uint64
 	closed    bool
 	closeOnce sync.Once
 }
 
 func NewClient(settings config.Metrics) *Client {
 	ctx, cancel := context.WithCancel(context.Background())
-	c := &Client{queue: make(chan string, queueSize), done: make(chan struct{}), cancel: cancel, http: httpx.NewClient(httpx.Options{
+	c := &Client{requests: make(map[requestKey]uint64), queue: make(chan string, queueSize), done: make(chan struct{}), cancel: cancel, http: httpx.NewClient(httpx.Options{
 		BaseURL: settings.URL, Timeout: 5 * time.Second,
 		Headers: map[string]string{
 			"Content-Type":  "text/plain; version=0.0.4",
@@ -43,7 +49,8 @@ func NewClient(settings config.Metrics) *Client {
 	return c
 }
 
-// Close stops accepting samples and allows up to five seconds to flush the queue.
+// Close stops accepting samples and allows up to five seconds to flush the queue
+// and request counts from the final partial minute.
 // It is safe to call concurrently with reporting or another Close.
 func (c *Client) Close() {
 	c.closeOnce.Do(func() {
@@ -71,7 +78,8 @@ func (c *Client) WriteHistorySize(_ context.Context, size int) error {
 	return c.enqueue(body)
 }
 
-// WriteHTTPRequestDuration queues one sample per completed HTTP attempt.
+// WriteHTTPRequestDuration queues one duration sample and counts the attempt
+// for the current minute, even if the duration queue is full.
 // Reporting survives cancellation of the original request.
 func (c *Client) WriteHTTPRequestDuration(_ context.Context, timing httpx.RequestTiming) error {
 	outcome := "error"
@@ -80,7 +88,12 @@ func (c *Client) WriteHTTPRequestDuration(_ context.Context, timing httpx.Reques
 	}
 	body := fmt.Sprintf("# TYPE divoom_http_request_duration_seconds gauge\ndivoom_http_request_duration_seconds{service=%q,method=%q,path=%q,status_code=%q,outcome=%q} %.9f %d\n",
 		timing.Service, timing.Method, timing.Path, fmt.Sprint(timing.StatusCode), outcome, timing.Duration.Seconds(), time.Now().UnixMilli())
-	return c.enqueue(body)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.closed {
+		c.requests[requestKey{timing.Service, timing.Method, timing.Path}]++
+	}
+	return c.enqueueLocked(body)
 }
 
 // enqueue never waits for network delivery or queue space. Errors indicate that
@@ -88,6 +101,10 @@ func (c *Client) WriteHTTPRequestDuration(_ context.Context, timing httpx.Reques
 func (c *Client) enqueue(body string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.enqueueLocked(body)
+}
+
+func (c *Client) enqueueLocked(body string) error {
 	if c.closed {
 		return errors.New("metrics: client closed")
 	}
@@ -101,13 +118,47 @@ func (c *Client) enqueue(body string) error {
 
 func (c *Client) run(ctx context.Context) {
 	defer close(c.done)
-	for body := range c.queue {
-		if ctx.Err() != nil {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
 			return
+		case <-ticker.C:
+			c.flushRequestCounts(ctx)
+		case body, ok := <-c.queue:
+			if ctx.Err() != nil {
+				return
+			}
+			if !ok {
+				c.flushRequestCounts(ctx)
+				return
+			}
+			if err := c.write(ctx, body); err != nil {
+				log.Printf("report metrics: %v", err)
+			}
 		}
-		if err := c.write(ctx, body); err != nil {
-			log.Printf("report metrics: %v", err)
-		}
+	}
+}
+
+// flushRequestCounts swaps the map before delivery so concurrent reports belong
+// to the next window. All groups are sent together in one import request.
+func (c *Client) flushRequestCounts(ctx context.Context) {
+	c.mu.Lock()
+	counts := c.requests
+	c.requests = make(map[requestKey]uint64)
+	c.mu.Unlock()
+	if len(counts) == 0 {
+		return
+	}
+	var body strings.Builder
+	body.WriteString("# TYPE divoom_http_requests_per_minute gauge\n")
+	timestamp := time.Now().UnixMilli()
+	for key, count := range counts {
+		fmt.Fprintf(&body, "divoom_http_requests_per_minute{service=%q,method=%q,path=%q} %d %d\n", key.service, key.method, key.path, count, timestamp)
+	}
+	if err := c.write(ctx, body.String()); err != nil {
+		log.Printf("report request counts: %v", err)
 	}
 }
 

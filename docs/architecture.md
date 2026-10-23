@@ -91,7 +91,7 @@ flowchart TB
 
     device("internal/device.Client<br/>Media and clock API<br/>Shared display lock"):::service
     httpx("internal/httpx.Client<br/>Shared HTTP implementation<br/>Bounded responses and request timing"):::service
-    metrics("internal/metrics.Client<br/>Optional bounded queue + delivery worker"):::service
+    metrics("internal/metrics.Client<br/>256-sample queue + delivery worker<br/>Request-count map + minute timer"):::service
     upstream["Divoom gallery API and artwork server"]:::external
     gateway["External device gateway"]:::external
     sink["External metrics endpoint"]:::external
@@ -125,7 +125,7 @@ flowchart TB
     device ==>|"Device HTTP requests"| httpx
     httpx -->|"Gallery requests"| upstream
     httpx ==>|"Device requests"| gateway
-    httpx -.->|"Gallery/device duration samples"| metrics
+    httpx -.->|"HTTP attempts: duration samples + grouped counts"| metrics
     metrics -.->|"Delivery with telemetry disabled"| httpx
     httpx -.->|"Metrics POST when enabled"| sink
 
@@ -247,7 +247,13 @@ Metrics are enabled only when `DIVOOM_METRICS_URL` is set. History saves and
 gallery/device HTTP attempts enqueue samples for one background worker. Its queue
 holds 256 pending samples; full queues drop new samples, and delivery failures
 are logged without failing the originating operation. Shutdown allows up to five
-seconds to flush the queue.
+seconds to flush the queue and final partial request-count window. HTTP duration
+and history samples send immediately. The metrics client also counts HTTP attempts
+in a map keyed by service, method, and path. Every minute it swaps the map and
+sends one batch containing `divoom_http_requests_per_minute` samples for all active
+groups; new attempts accumulate in the next window. Counts include failed attempts
+and duration samples dropped by a full queue. Empty windows send no count samples;
+failed count deliveries are logged without retries.
 
 ## Implementation references
 
