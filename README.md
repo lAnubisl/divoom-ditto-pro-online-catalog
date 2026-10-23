@@ -81,6 +81,10 @@ artwork is cached without automatic eviction. For access from another machine,
 set `DIVOOM_WEB_HOST=0.0.0.0` and use the server's address. Use a trusted LAN or an
 HTTPS reverse proxy for remote access.
 
+Playback history is loaded once at startup and kept in memory. Successful
+automatic sends save changes to disk; restart the app to pick up external edits
+to `history.json`.
+
 ## Metrics
 
 Set `DIVOOM_METRICS_URL` to enable metrics reporting, with
@@ -89,10 +93,10 @@ authentication. There is no default URL. An unset or blank URL disables reportin
 and skips credential validation, even when credentials are set.
 
 The service pushes the `divoom_gallery_history_size` gauge (the number of entries
-in the persisted history array) from the rotation selector after each successful
-history save, including resets, rollbacks, and replacements that keep the same
-size. The selector calls the metrics client directly after saving; startup does
-not send a history sample.
+in the persisted history array) from the history store after each successful
+history save following a completed automatic send, including source restarts
+and replacements that keep the same size. The runner queues a sample after
+saving; startup does not send a history sample.
 
 Every outbound gallery and device HTTP attempt also pushes the
 `divoom_http_request_duration_seconds` gauge. Labels identify `service`
@@ -116,9 +120,13 @@ JSON validation happens afterward. This gauge records individual execution
 times, rather than cumulative histogram buckets. Metrics delivery uses its own
 five-second timeout even when the original request was cancelled.
 
-Each metrics request completes or times out before the calling operation
-continues. Failures are logged without failing the history save, gallery request,
-or device command. There is no queue, change tracking, or periodic reporting.
+Samples are timestamped when recorded and queued for a single background worker,
+so history saves, gallery requests, and device commands do not wait for metrics
+delivery. The queue holds up to 256 pending samples; when full, new samples are
+dropped and the failure is logged. Delivery failures are also logged, without
+retries or failing the original operation. Shutdown allows up to five seconds to
+flush pending samples before cancelling delivery and discarding the remainder.
+There is no change tracking or periodic reporting.
 
 Set the full endpoint URL, for example
 `http://<SERVER-IP-ADDRESS>:8428/api/v1/import/prometheus`, using VictoriaMetrics'
@@ -142,6 +150,7 @@ service installation and updates, see the [deployment guide](deploy/README.md).
 
 ## Documentation
 
+- [Architecture and component diagrams](docs/architecture.md)
 - [Device gateway integration](docs/http-client-agent-guide.md)
 - [Clock controls](docs/clock-settings.md)
 - [Divoom hosted API reference](docs/divoom-api/README.md)
