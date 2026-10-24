@@ -141,12 +141,15 @@ func (c *Client) run(ctx context.Context) {
 	}
 }
 
-// flushRequestCounts swaps the map before delivery so concurrent reports belong
-// to the next window. All groups are sent together in one import request.
+// flushRequestCounts snapshots and resets counts before delivery so concurrent
+// reports belong to the next window. Known groups keep reporting even at zero.
 func (c *Client) flushRequestCounts(ctx context.Context) {
 	c.mu.Lock()
-	counts := c.requests
-	c.requests = make(map[requestKey]uint64)
+	counts := make(map[requestKey]uint64, len(c.requests))
+	for key, count := range c.requests {
+		counts[key] = count
+		c.requests[key] = 0
+	}
 	c.mu.Unlock()
 	if len(counts) == 0 {
 		return

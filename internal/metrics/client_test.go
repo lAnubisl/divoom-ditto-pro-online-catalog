@@ -203,8 +203,20 @@ func TestRequestCountsGroupAndReset(t *testing.T) {
 		}
 	}
 	client.flushRequestCounts(context.Background())
-	if len(received) != 0 {
-		t.Fatal("empty window sent a batch")
+	select {
+	case body := <-received:
+		for _, labels := range []string{
+			`service="device",method="GET",path="/animation"`,
+			`service="device",method="POST",path="/animation"`,
+			`service="device",method="GET",path="/clock"`,
+			`service="gallery",method="GET",path="/animation"`,
+		} {
+			if !strings.Contains(body, labels+"} 0 ") {
+				t.Fatalf("missing zero count for %s in %q", labels, body)
+			}
+		}
+	case <-time.After(time.Second):
+		t.Fatal("zero count batch was not delivered")
 	}
 	report("device", "GET", "/animation", true)
 	client.flushRequestCounts(context.Background())

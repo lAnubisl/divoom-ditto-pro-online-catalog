@@ -262,7 +262,7 @@ failed count deliveries are logged without retries.
 - [Routes and web security](../internal/handlers/server.go)
 - [Manual command coordination](../internal/playback/controller.go)
 - [Automatic playback and selection](../internal/rotation/runner.go)
-- [History interface](../internal/rotation/history.go) and [history store](../internal/history/history.go)
+- [History interface](../internal/rotation/history.go) and [history store](../internal/history/store.go)
 - [Gallery/media adapter](../internal/source/adapter.go) and [gallery API client](../internal/gallery/client.go)
 - [Device gateway client](../internal/device/client.go) and [integration contract](http-client-agent-guide.md)
 - [Shared HTTP helper](../internal/httpx/http.go) and [metrics worker](../internal/metrics/client.go)
