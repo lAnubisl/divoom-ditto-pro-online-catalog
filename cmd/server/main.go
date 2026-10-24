@@ -15,14 +15,12 @@ import (
 	"divoom-gallery-client/internal/device"
 	"divoom-gallery-client/internal/gallery"
 	"divoom-gallery-client/internal/handlers"
-	"divoom-gallery-client/internal/history"
 	"divoom-gallery-client/internal/httpx"
 	"divoom-gallery-client/internal/media"
 	"divoom-gallery-client/internal/metrics"
 	"divoom-gallery-client/internal/playback"
 	"divoom-gallery-client/internal/rotation"
 	"divoom-gallery-client/internal/settings"
-	"divoom-gallery-client/internal/skipped"
 	"divoom-gallery-client/internal/source"
 )
 
@@ -66,8 +64,7 @@ func run() error {
 		return err
 	}
 	defaults := settings.Defaults(0, defaultInterval, defaultDisplayDuration)
-	prefs := settings.New(filepath.Join(dataDir, "settings.json"), defaults)
-	_, err = prefs.Read()
+	prefs, err := settings.New(filepath.Join(dataDir, "settings.json"), defaults)
 	if err != nil {
 		return err
 	}
@@ -75,29 +72,19 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	skippedItems, err := skipped.New(filepath.Join(dataDir, "skipped.json"))
-	if err != nil {
-		return err
-	}
-	var historyMetrics history.Metrics
 	var requestMetrics httpx.Metrics
 	if metricsConfig.URL != "" {
 		client := metrics.NewClient(metricsConfig)
 		defer client.Close()
-		historyMetrics = client
 		requestMetrics = client
 	}
-	playbackHistory, err := history.New(filepath.Join(dataDir, "history.json"), historyMetrics)
-	if err != nil {
-		return err
-	}
 	api := gallery.New(gallery.Options{Email: account.Email, Password: account.Password, Metrics: requestMetrics})
-	animationSource := source.New(prefs, api, mediaStore, skippedItems)
+	animationSource := source.New(api, mediaStore, prefs)
 	deviceDisplay := device.New(d, requestMetrics)
 	if err := deviceDisplay.Health(ctx); err != nil {
 		return fmt.Errorf("device API health: %w", err)
 	}
-	runner := rotation.New(prefs, playbackHistory, animationSource, deviceDisplay)
+	runner := rotation.New(prefs, animationSource, deviceDisplay)
 	commands := playback.New(prefs, runner, animationSource, deviceDisplay)
 	ui := handlers.New(animationSource, api, commands, prefs, runner, int(defaults.SourceID), password)
 	return serveWeb(ctx, listen, ui, runner)

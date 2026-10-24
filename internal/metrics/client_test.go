@@ -14,6 +14,11 @@ import (
 	"divoom-gallery-client/internal/httpx"
 )
 
+func sampleTiming(milliseconds int) httpx.RequestTiming {
+	return httpx.RequestTiming{Service: "gallery", Method: "GET", Path: "/artwork",
+		StatusCode: 200, Success: true, Duration: time.Duration(milliseconds) * time.Millisecond}
+}
+
 func TestReportingDoesNotWaitForDelivery(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -30,7 +35,7 @@ func TestReportingDoesNotWaitForDelivery(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	returned := make(chan error, 1)
-	go func() { returned <- client.WriteHistorySize(ctx, 42) }()
+	go func() { returned <- client.WriteHTTPRequestDuration(ctx, sampleTiming(42)) }()
 	select {
 	case err := <-returned:
 		if err != nil {
@@ -45,11 +50,11 @@ func TestReportingDoesNotWaitForDelivery(t *testing.T) {
 		t.Fatal("cancelled caller prevented background delivery")
 	}
 	for i := 0; i < queueSize; i++ {
-		if err := client.WriteHistorySize(ctx, i); err != nil {
+		if err := client.WriteHTTPRequestDuration(ctx, sampleTiming(i)); err != nil {
 			t.Fatalf("enqueue sample %d: %v", i, err)
 		}
 	}
-	if err := client.WriteHistorySize(ctx, 999); err == nil {
+	if err := client.WriteHTTPRequestDuration(ctx, sampleTiming(999)); err == nil {
 		t.Fatal("full queue did not reject new sample")
 	}
 }
@@ -73,7 +78,7 @@ func TestCloseFlushesSamplesAndRejectsFurtherWrites(t *testing.T) {
 	}))
 	defer server.Close()
 	client := NewClient(config.Metrics{URL: server.URL, Username: "user", Password: "secret"})
-	if err := client.WriteHistorySize(context.Background(), 7); err != nil {
+	if err := client.WriteHTTPRequestDuration(context.Background(), sampleTiming(7)); err != nil {
 		t.Fatal(err)
 	}
 	if err := client.WriteHTTPRequestDuration(context.Background(), httpx.RequestTiming{
@@ -89,14 +94,14 @@ func TestCloseFlushesSamplesAndRejectsFurtherWrites(t *testing.T) {
 	if len(bodies) != 3 {
 		t.Fatalf("close delivered %d requests, want 3", len(bodies))
 	}
-	if !strings.Contains(bodies[0], "divoom_gallery_history_size 7 ") ||
+	if !strings.Contains(bodies[0], "divoom_http_request_duration_seconds") ||
 		!strings.Contains(bodies[1], `service="gallery",method="GET",path="/artwork",status_code="200",outcome="success"} 0.250000000 `) {
 		t.Fatalf("unexpected samples: %q", bodies)
 	}
-	if !strings.Contains(bodies[2], `divoom_http_requests_per_minute{service="gallery",method="GET",path="/artwork"} 1 `) {
+	if !strings.Contains(bodies[2], `divoom_http_requests_per_minute{service="gallery",method="GET",path="/artwork"} 2 `) {
 		t.Fatalf("missing shutdown request count: %q", bodies[2])
 	}
-	if err := client.WriteHistorySize(context.Background(), 8); err == nil {
+	if err := client.WriteHTTPRequestDuration(context.Background(), sampleTiming(8)); err == nil {
 		t.Fatal("closed client accepted a sample")
 	}
 }
@@ -112,7 +117,7 @@ func TestCloseBoundsFlushTime(t *testing.T) {
 	defer close(release)
 	client := NewClient(config.Metrics{URL: server.URL})
 	defer client.Close()
-	if err := client.WriteHistorySize(context.Background(), 1); err != nil {
+	if err := client.WriteHTTPRequestDuration(context.Background(), sampleTiming(1)); err != nil {
 		t.Fatal(err)
 	}
 	select {
@@ -120,7 +125,7 @@ func TestCloseBoundsFlushTime(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("background delivery did not start")
 	}
-	if err := client.WriteHistorySize(context.Background(), 2); err != nil {
+	if err := client.WriteHTTPRequestDuration(context.Background(), sampleTiming(2)); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan struct{})
@@ -142,7 +147,7 @@ func TestConcurrentCloseAndReporting(t *testing.T) {
 		go func() {
 			defer workers.Done()
 			for j := 0; j < 20; j++ {
-				_ = client.WriteHistorySize(context.Background(), j)
+				_ = client.WriteHTTPRequestDuration(context.Background(), sampleTiming(j))
 			}
 			client.Close()
 		}()

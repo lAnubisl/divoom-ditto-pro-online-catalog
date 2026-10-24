@@ -56,7 +56,13 @@ func (c *Controller) Resume() error {
 
 func (c *Controller) SetSource(kind string, id int64, name string) error {
 	return c.command(func() error {
-		return c.update(func(v *settings.Values) { v.Source = kind; v.SourceID = id; v.SourceName = name }, false, false)
+		return c.update(func(v *settings.Values) {
+			if v.Source != kind || v.SourceID != id {
+				v.SourcePage = 0
+				v.PreviousItemID = 0
+			}
+			v.Source, v.SourceID, v.SourceName = kind, id, name
+		}, false, false)
 	})
 }
 

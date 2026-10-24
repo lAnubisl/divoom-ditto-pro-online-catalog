@@ -7,15 +7,17 @@ import (
 
 // Values preserves the existing version 2 settings file format.
 type Values struct {
-	Version    int    `json:"version"`
-	Enabled    bool   `json:"enabled"`
-	Source     string `json:"source"`
-	SourceID   int64  `json:"source_id"`
-	SourceName string `json:"source_name,omitempty"`
-	Interval   string `json:"interval"`
-	Duration   string `json:"duration"`
-	StyleID    int    `json:"style_id"`
-	StyleColor string `json:"style_color"`
+	Version        int    `json:"version"`
+	Enabled        bool   `json:"enabled"`
+	Source         string `json:"source"`
+	SourceID       int64  `json:"source_id"`
+	PreviousItemID int64  `json:"previous_item_id"`
+	SourcePage     int    `json:"source_page"` // Zero starts at page 1.
+	SourceName     string `json:"source_name,omitempty"`
+	Interval       string `json:"interval"`
+	Duration       string `json:"duration"`
+	StyleID        int    `json:"style_id"`
+	StyleColor     string `json:"style_color"`
 }
 
 func Defaults(category int, interval, duration time.Duration) Values {
@@ -36,6 +38,12 @@ func (v Values) validate() error {
 	validSource := (v.Source == "category" && v.SourceID >= 0 && v.SourceID <= 255) || (v.Source == "album" && v.SourceID > 0)
 	if err := v.Clock().Validate(); err != nil {
 		return err
+	}
+	if v.PreviousItemID < 0 {
+		return errors.New("previous_item_id must not be negative")
+	}
+	if v.SourcePage < 0 {
+		return errors.New("source_page must not be negative")
 	}
 	if v.Version != 2 || !validSource || e1 != nil || e2 != nil || interval <= 0 || duration <= 0 || duration >= interval {
 		return errors.New("invalid autoplay settings: require version 2, valid source and 0 < duration < interval")

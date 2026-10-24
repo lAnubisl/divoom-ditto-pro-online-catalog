@@ -12,7 +12,7 @@ type Item struct {
 	Size   int    `json:"FileSize"`
 }
 
-// Filename is the stable identity used by disk storage and playback history.
+// Filename is the stable identity used by disk storage.
 func (item Item) Filename() string { return strconv.FormatInt(item.ID, 10) + ".gif" }
 
 // Selectable reports whether gallery metadata describes supported 16x16 work.

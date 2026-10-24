@@ -13,7 +13,7 @@ to your display, or let automatic rotation alternate animations with your clock.
 - Rotate artwork automatically from a chosen category or album, with configurable
   intervals and display duration.
 - Restore the clock between automatic animations and customize its style and color.
-- Keep autoplay preferences, clock appearance, playback history, and downloaded
+- Keep autoplay preferences, the source cursor, clock appearance, and downloaded
   artwork across restarts.
 - Access a password-protected interface served by a single Go executable with
   embedded web assets.
@@ -24,14 +24,10 @@ rotation; resume it through the web interface when ready.
 
 Gallery lists load metadata without downloading artwork for format checks.
 Artwork is downloaded and decoded when needed for a preview or playback, and
-successful conversions are cached on disk. Unsupported encodings discovered
-during loading are recorded as gallery IDs in `DATA_DIR/skipped.json`, a JSON
-array such as `[4203677,4223443]`. Rotation excludes these IDs across categories,
-albums, restarts, and playback-history resets, and immediately tries another item
-when it discovers an unsupported encoding. Preview requests also reuse this list
-to avoid repeated downloads. Network failures and malformed files with recognized
-encodings are not added. Stop the app and remove an ID (or clear the array) to
-retry it after decoder support changes.
+successful conversions are cached on disk. If an animation cannot be loaded,
+decoded, or uploaded, the iteration ends and playback continues with the next
+item after the scheduled delay. Failed items remain eligible when the cursor
+wraps to the beginning of the source.
 
 ## Requirements
 
@@ -74,16 +70,32 @@ priority on subsequent starts.
 | --- | --- | --- |
 | `DIVOOM_WEB_HOST` | `127.0.0.1` | Address the web server listens on |
 | `DIVOOM_WEB_PORT` | `8090` | Web server port |
-| `DATA_DIR` | `var/lib/divoom_gallery_web/` | Directory for settings, history, and cached artwork |
+| `DATA_DIR` | `var/lib/divoom_gallery_web/` | Directory for settings and cached artwork |
 
 The default data directory is relative to the working directory. Downloaded
 artwork is cached without automatic eviction. For access from another machine,
 set `DIVOOM_WEB_HOST=0.0.0.0` and use the server's address. Use a trusted LAN or an
 HTTPS reverse proxy for remote access.
 
-Playback history is loaded once at startup and kept in memory. Successful
-automatic sends save changes to disk; restart the app to pick up external edits
-to `history.json`.
+The source adapter owns navigation through `NextAnimation` and persists
+`source_page` and `previous_item_id` in `settings.json` before loading each
+selected item. Zero (including old files without these fields) starts at page 1.
+The next request resumes after the previous item on the saved page, continuing
+to later pages and wrapping to the beginning at the remote end. If that item
+has disappeared from the page, navigation resumes at the start of that page.
+
+Each scheduled iteration calls `NextAnimation` once and uploads the returned
+GIF. The adapter selects the item, saves the cursor, and loads its animation.
+Manual playback and previews use `Animation` to load a specific item. The
+persisted cursor determines playback order and wraps automatically. Download, decode, or upload failures end
+the current iteration; after the normal scheduled delay, the runner requests the
+next item. Failed items can be attempted again after the cursor wraps.
+
+A source change through the web UI resets both cursor fields together with the
+category or album ID; timing and clock changes preserve them. A pass is limited
+to 10,000 pages. Page errors and limit failures preserve the last saved cursor.
+There is no list cache or separate head check. New items inserted before the
+cursor may be missed until rotation reaches the end and starts over.
 
 ## Metrics
 
@@ -92,13 +104,7 @@ Set `DIVOOM_METRICS_URL` to enable metrics reporting, with
 authentication. There is no default URL. An unset or blank URL disables reporting
 and skips credential validation, even when credentials are set.
 
-The service pushes the `divoom_gallery_history_size` gauge (the number of entries
-in the persisted history array) from the history store after each successful
-history save following a completed automatic send, including source restarts
-and replacements that keep the same size. The history store queues a sample after
-saving; startup does not send a history sample.
-
-Every outbound gallery and device HTTP attempt also pushes the
+Every outbound gallery and device HTTP attempt pushes the
 `divoom_http_request_duration_seconds` gauge. Labels identify `service`
 (`gallery` or `device`), `method`, `path`, `status_code`, and `outcome`
 (`success` or `error`). Gallery login, session renewal retries, category and album
@@ -121,7 +127,7 @@ times, rather than cumulative histogram buckets. Metrics delivery uses its own
 five-second timeout even when the original request was cancelled.
 
 Samples are timestamped when recorded and queued for a single background worker,
-so history saves, gallery requests, and device commands do not wait for metrics
+so gallery requests and device commands do not wait for metrics
 delivery. The queue holds up to 256 pending samples; when full, new samples are
 dropped and the failure is logged. Delivery failures are also logged, without
 retries or failing the original operation. Shutdown allows up to five seconds to
@@ -134,7 +140,7 @@ the preceding reporting window, including failures. Counts use the same normaliz
 paths as durations and include attempts whose duration samples were dropped by a
 full queue. Empty windows send no count samples. Counts reset each window; failed
 count deliveries are logged without retries. Shutdown also flushes the final
-partial window within the existing five-second limit. Duration and history
+partial window within the existing five-second limit. Duration
 samples continue to send immediately through the 256-entry queue.
 
 Set the full endpoint URL, for example

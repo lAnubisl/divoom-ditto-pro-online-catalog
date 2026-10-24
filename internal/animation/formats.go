@@ -3,7 +3,7 @@ package animation
 import "errors"
 
 // ErrUnsupportedFormat distinguishes unsupported encodings from damaged files
-// and transient download failures, which must remain eligible for retry.
+// and transient download failures.
 var ErrUnsupportedFormat = errors.New("unsupported artwork format (expected 16x16 format 8, 9, or 12)")
 
 // Binary artwork encodings, distinct from gallery API FileType values.

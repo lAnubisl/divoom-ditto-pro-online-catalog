@@ -22,7 +22,7 @@ const galleryAgent = "Aurabox/3.1.10 (iPad; iOS 14.8; Scale/2.00)"
 const maxResponseSize = 2 * 1024 * 1024
 
 // Client fetches gallery data. It owns authentication and session renewal,
-// without knowing about local files, playback history, rotation, or web pages.
+// without knowing about local files, rotation, or web pages.
 type Client struct {
 	mu              sync.Mutex
 	api, files      *httpx.Client

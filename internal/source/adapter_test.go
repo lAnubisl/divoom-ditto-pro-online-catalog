@@ -7,83 +7,105 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"divoom-gallery-client/internal/animation"
 	"divoom-gallery-client/internal/gallery"
 	"divoom-gallery-client/internal/media"
-	"divoom-gallery-client/internal/settings"
-	"divoom-gallery-client/internal/skipped"
 )
 
+type pageRequest struct {
+	kind string
+	id   int64
+	page int
+}
+
 type testAPI struct {
+	requests  []pageRequest
+	pageError error
 	items     []gallery.Item
 	raw       []byte
 	err       error
 	downloads int
 }
 
-func (a *testAPI) FetchCategoryPage(_ context.Context, _, page int) (gallery.Page, error) {
+func (a *testAPI) FetchCategoryPage(_ context.Context, category, page int) (gallery.Page, error) {
+	a.requests = append(a.requests, pageRequest{"category", int64(category), page})
+	return a.page(page)
+}
+func (a *testAPI) FetchAlbumPage(_ context.Context, albumID int64, page int) (gallery.Page, error) {
+	a.requests = append(a.requests, pageRequest{"album", albumID, page})
+	return a.page(page)
+}
+func (a *testAPI) page(page int) (gallery.Page, error) {
+	if a.pageError != nil {
+		return gallery.Page{}, a.pageError
+	}
 	if page > 1 {
 		return gallery.Page{}, nil
 	}
 	return gallery.Page{Items: a.items}, nil
-}
-func (a *testAPI) FetchAlbumPage(ctx context.Context, _ int64, page int) (gallery.Page, error) {
-	return a.FetchCategoryPage(ctx, 0, page)
 }
 func (a *testAPI) FetchItem(context.Context, gallery.Item) ([]byte, error) {
 	a.downloads++
 	return a.raw, a.err
 }
 
-func TestUnsupportedItemsPersistWithoutBreakingPagination(t *testing.T) {
-	dir := t.TempDir()
-	prefs := settings.New(filepath.Join(dir, "settings.json"), settings.Defaults(0, time.Minute, time.Second))
-	cache, err := media.New(filepath.Join(dir, "media"))
+func TestUnsupportedItemRemainsCandidateAfterFailure(t *testing.T) {
+	cache, err := media.New(filepath.Join(t.TempDir(), "media"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "skipped.json")
-	store, err := skipped.New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	prefs, _ := cursorStore(t, 1, 0)
 	item := gallery.Item{ID: 42, FileID: "artwork", Type: 1, Size: 1}
 	api := &testAPI{items: []gallery.Item{item}, raw: []byte{99}}
-	adapter := New(prefs, api, cache, store)
-	ctx := context.Background()
-	if _, err := adapter.Animation(ctx, item); !errors.Is(err, animation.ErrUnsupportedFormat) {
-		t.Fatalf("expected unsupported encoding, got %v", err)
+	adapter := New(api, cache, prefs)
+	for attempt := 0; attempt < 2; attempt++ {
+		if _, err := adapter.NextAnimation(context.Background()); !errors.Is(err, animation.ErrUnsupportedFormat) {
+			t.Fatalf("expected unsupported format: %v", err)
+		}
+		if got := cursorValues(t, prefs); got.SourcePage != 1 || got.PreviousItemID != item.ID {
+			t.Fatalf("failed load did not persist cursor: %+v", got)
+		}
+		// Recreate the adapter to verify only the cursor survives a restart.
+		adapter = New(api, cache, prefs)
 	}
-	store, err = skipped.New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	adapter = New(prefs, api, cache, store)
-	if _, err := adapter.Animation(ctx, item); !errors.Is(err, animation.ErrUnsupportedFormat) || api.downloads != 1 {
-		t.Fatalf("known unsupported item downloaded again: downloads=%d err=%v", api.downloads, err)
-	}
-	for _, source := range []string{"category", "album"} {
-		if err := prefs.Update(func(v *settings.Values) { v.Source = source; v.SourceID = 34 }); err != nil {
-			t.Fatal(err)
-		}
-		pages, err := adapter.Pages()
-		if err != nil {
-			t.Fatal(err)
-		}
-		items, end, err := pages(ctx, 1)
-		if err != nil || len(items) != 0 || end {
-			t.Fatalf("filtered page must not end pagination: items=%v end=%v err=%v", items, end, err)
-		}
-		_, end, err = pages(ctx, 2)
-		if err != nil || !end {
-			t.Fatalf("empty remote page must end pagination: end=%v err=%v", end, err)
-		}
+	if api.downloads != 2 {
+		t.Fatalf("unsupported artwork was not retried on wrap: downloads=%d", api.downloads)
 	}
 }
 
-func TestTransientAndMalformedArtworkAreNotSkipped(t *testing.T) {
+func TestNextAnimationSelectionFailureDoesNotDownload(t *testing.T) {
+	for _, scenario := range []string{"empty", "page error", "cancelled"} {
+		t.Run(scenario, func(t *testing.T) {
+			prefs, _ := cursorStore(t, 1, 0)
+			cache, err := media.New(filepath.Join(t.TempDir(), "media"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			api := &testAPI{}
+			want := ErrEmptyGallery
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			switch scenario {
+			case "page error":
+				want = errors.New("network timeout")
+				api.pageError = want
+			case "cancelled":
+				want = context.Canceled
+				cancel()
+			}
+			adapter := New(api, cache, prefs)
+			if data, err := adapter.NextAnimation(ctx); !errors.Is(err, want) || len(data) != 0 {
+				t.Fatalf("unexpected result: bytes=%d err=%v", len(data), err)
+			}
+			if api.downloads != 0 {
+				t.Fatal("selection failure started an artwork download")
+			}
+		})
+	}
+}
+
+func TestFailedArtworkIsRetriedOnLaterRequest(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		raw  []byte
@@ -95,24 +117,20 @@ func TestTransientAndMalformedArtworkAreNotSkipped(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
-			store, err := skipped.New(filepath.Join(dir, "skipped.json"))
-			if err != nil {
-				t.Fatal(err)
-			}
 			cache, err := media.New(filepath.Join(dir, "media"))
 			if err != nil {
 				t.Fatal(err)
 			}
 			api := &testAPI{raw: tc.raw, err: tc.err}
-			adapter := New(nil, api, cache, store)
+			adapter := New(api, cache, nil)
 			item := gallery.Item{ID: 42}
 			for i := 0; i < 2; i++ {
 				if _, err := adapter.Animation(context.Background(), item); err == nil {
 					t.Fatal("expected loading error")
 				}
 			}
-			if store.Contains(item.ID) || api.downloads != 2 {
-				t.Fatal("temporary or malformed response was permanently skipped")
+			if api.downloads != 2 {
+				t.Fatal("failed response was not retried")
 			}
 		})
 	}
@@ -120,10 +138,6 @@ func TestTransientAndMalformedArtworkAreNotSkipped(t *testing.T) {
 
 func TestSupportedArtworkIsDownloadedOnce(t *testing.T) {
 	dir := t.TempDir()
-	store, err := skipped.New(filepath.Join(dir, "skipped.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	cache, err := media.New(filepath.Join(dir, "media"))
 	if err != nil {
 		t.Fatal(err)
@@ -135,14 +149,19 @@ func TestSupportedArtworkIsDownloadedOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	cipher.NewCBCEncrypter(block, []byte("1234567890123456")).CryptBlocks(raw[1:], make([]byte, 768))
-	api := &testAPI{raw: raw}
-	adapter := New(nil, api, cache, store)
+	item := gallery.Item{ID: 42, FileID: "artwork", Type: 1, Size: 1}
+	api := &testAPI{raw: raw, items: []gallery.Item{item}}
+	prefs, _ := cursorStore(t, 1, 0)
+	adapter := New(api, cache, prefs)
 	for i := 0; i < 2; i++ {
-		if _, err := adapter.Animation(context.Background(), gallery.Item{ID: 42}); err != nil {
-			t.Fatal(err)
+		if data, err := adapter.NextAnimation(context.Background()); err != nil || len(data) == 0 {
+			t.Fatalf("next animation: bytes=%d err=%v", len(data), err)
 		}
 	}
-	if api.downloads != 1 || store.Contains(42) {
+	if _, err := adapter.Animation(context.Background(), item); err != nil {
+		t.Fatalf("manual animation loading failed: %v", err)
+	}
+	if api.downloads != 1 {
 		t.Fatal("supported artwork must use the existing disk cache")
 	}
 }

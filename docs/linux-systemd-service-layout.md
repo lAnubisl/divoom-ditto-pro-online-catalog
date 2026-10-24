@@ -94,7 +94,7 @@ PORT=8080
 DATA_DIR=/var/lib/myservice
 ```
 
-The application reads DATA_DIR and stores settings.json, history.json and media/ beneath it. An `EnvironmentFile` is a systemd environment-variable file, **not** a shell script. Avoid putting secrets in environment variables if a stronger mechanism such as systemd credentials is available.
+The application reads DATA_DIR and stores settings.json and media/ beneath it. An `EnvironmentFile` is a systemd environment-variable file, **not** a shell script. Avoid putting secrets in environment variables if a stronger mechanism such as systemd credentials is available.
 
 ## Operational guidance
 

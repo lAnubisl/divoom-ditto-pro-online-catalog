@@ -1,10 +1,8 @@
-// Package rotation coordinates automatic playback, candidate selection, and history.
+// Package rotation coordinates automatic playback and clock restoration.
 package rotation
 
 import (
 	"context"
-	"divoom-gallery-client/internal/animation"
-	"divoom-gallery-client/internal/gallery"
 	"divoom-gallery-client/internal/settings"
 	"errors"
 	"fmt"
@@ -13,11 +11,13 @@ import (
 	"time"
 )
 
-var ErrEmptyGallery = errors.New("gallery has no selectable items")
+// Source owns candidate selection and persists its navigation cursor.
+type Source interface {
+	NextAnimation(context.Context) ([]byte, error)
+}
 
 type Runner struct {
 	settings      *settings.Store
-	history       History
 	source        Source
 	display       Display
 	mu            sync.Mutex
@@ -32,8 +32,8 @@ type Runner struct {
 	restoreCancel context.CancelFunc
 }
 
-func New(prefs *settings.Store, history History, source Source, display Display) *Runner {
-	return &Runner{settings: prefs, history: history, source: source, display: display, changed: make(chan struct{}, 1), next: time.Now()}
+func New(prefs *settings.Store, source Source, display Display) *Runner {
+	return &Runner{settings: prefs, source: source, display: display, changed: make(chan struct{}, 1), next: time.Now()}
 }
 
 func (r *Runner) State() State {
@@ -104,72 +104,19 @@ func (r *Runner) restoreClock() error {
 	return nil
 }
 
-// selectNext finds the first unplayed item, or restarts an exhausted source.
-// Selection does not change history; only successful sends are recorded.
-func (r *Runner) selectNext(ctx context.Context) (gallery.Item, error) {
-	pages, err := r.source.Pages()
-	if err != nil {
-		return gallery.Item{}, err
-	}
-	var first gallery.Item
-	for page := 1; ; page++ {
-		if err := ctx.Err(); err != nil {
-			return gallery.Item{}, err
-		}
-		items, end, err := pages(ctx, page)
-		if err != nil {
-			return gallery.Item{}, fmt.Errorf("gallery page %d: %w", page, err)
-		}
-		for _, item := range items {
-			if first.ID == 0 {
-				first = item
-			}
-			if !r.history.Contains(item.Filename()) {
-				return item, nil
-			}
-		}
-		if end {
-			break
-		}
-	}
-	if first.ID == 0 {
-		return gallery.Item{}, ErrEmptyGallery
-	}
-	return first, nil
-}
-
-// nextAnimation learns unsupported IDs and immediately tries the next candidate.
-// Failed retrieval never counts as playback history, including skipped artwork.
-func (r *Runner) nextAnimation(ctx context.Context) (gallery.Item, []byte, error) {
-	for {
-		if err := ctx.Err(); err != nil {
-			return gallery.Item{}, nil, err
-		}
-		item, err := r.selectNext(ctx)
-		if err != nil {
-			return gallery.Item{}, nil, fmt.Errorf("select animation: %w", err)
-		}
-		data, err := r.source.Animation(ctx, item)
-		if err == nil {
-			return item, data, nil
-		}
-		if !errors.Is(err, animation.ErrUnsupportedFormat) {
-			return gallery.Item{}, nil, fmt.Errorf("load animation: %w", err)
-		}
-		log.Printf("Skipping animation %d: unsupported artwork format.", item.ID)
-	}
-}
-
 func (r *Runner) cycle(ctx context.Context, duration time.Duration) (err error) {
 	if err := r.display.Lock(ctx); err != nil {
 		return err
 	}
 	defer r.display.Unlock()
-	item, data, err := r.nextAnimation(ctx)
-	if err != nil {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	// This check prevents cancelled source work from starting a device request.
+	data, err := r.source.NextAnimation(ctx)
+	if err != nil {
+		return fmt.Errorf("next animation: %w", err)
+	}
+	// Cancelled source work must not start a device request.
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -181,14 +128,7 @@ func (r *Runner) cycle(ctx context.Context, duration time.Duration) (err error) 
 	if err := r.display.SendAnimation(ctx, data); err != nil {
 		return fmt.Errorf("animation upload: %w", err)
 	}
-	// A completed send belongs in history even if a pause cancelled the cycle.
-	historyCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	err = r.history.Record(historyCtx, item.Filename())
-	cancel()
-	if err != nil {
-		return fmt.Errorf("save playback history: %w", err)
-	}
-	log.Printf("Animation %s send completed; returning to clock in %s.", item.Filename(), duration)
+	log.Printf("Animation send completed; returning to clock in %s.", duration)
 	return wait(ctx, duration)
 }
 

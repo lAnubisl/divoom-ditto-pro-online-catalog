@@ -41,7 +41,7 @@ flowchart LR
     metrics["Optional metrics endpoint<br/>VictoriaMetrics Prometheus import API"]:::external
 
     browser -->|"HTTP: pages, fragments, previews, commands"| app
-    app -->|"Read/write preferences, history, skipped IDs, GIF cache"| disk
+    app -->|"Read/write preferences, source cursor, GIF cache"| disk
     app -->|"HTTPS: login, category and album metadata"| api
     app -->|"HTTPS: download original artwork"| files
     app ==>|"HTTP(S) + X-Api-Key: media and clock commands"| gateway
@@ -76,16 +76,13 @@ flowchart TB
     end
 
     subgraph content["Gallery and media"]
-        source("internal/source.Adapter<br/>Autoplay pages and shared animation loading"):::service
+        source("internal/source.Adapter<br/>Persisted candidate cursor and shared animation loading"):::service
         gallery("internal/gallery.Client<br/>Metadata, downloads, login and session renewal"):::service
         decoder("internal/animation<br/>Decode Divoom artwork into 16 x 16 GIF"):::service
     end
 
     subgraph storage["Shared state and local persistence"]
         settings[("internal/settings<br/>settings.json")]:::storage
-        history("internal/history.Store<br/>Ordered slice, Contains, Record<br/>Retention, persistence, size metrics"):::service
-        historyFile[("DATA_DIR/history.json<br/>Ordered filename array")]:::storage
-        skipped[("internal/skipped<br/>skipped.json")]:::storage
         media[("internal/media<br/>media/ID.gif")]:::storage
     end
 
@@ -98,7 +95,6 @@ flowchart TB
 
     boot -.->|"Constructs dependencies and starts HTTP server + runner"| handlers
     boot -.-> runner
-    boot -.->|"Construct store; load history once"| history
     handlers -->|"Render and serve"| assets
     handlers -->|"Browse metadata"| gallery
     handlers -->|"GIF previews"| source
@@ -110,16 +106,11 @@ flowchart TB
     playback -->|"Load GIF"| source
     playback ==>|"Lock and issue manual commands"| device
     runner -->|"Read schedule and clock preferences"| settings
-    runner -->|"Load GIF"| source
     runner ==>|"Lock, send, wait, restore clock"| device
-    runner -->|"rotation.History interface: Contains / Record"| history
-    history -->|"Load at startup; atomically save completed sends"| historyFile
-    runner -->|"Fetch configured source pages"| source
-    history -.->|"History-size samples after saves"| metrics
-    source -->|"Read source preferences"| settings
+    runner -->|"NextAnimation"| source
+    source -->|"Read source; persist page and previous item ID"| settings
     source -->|"Fetch pages and original artwork"| gallery
     source -->|"Read/write converted GIFs"| media
-    source -->|"Read/write unsupported IDs"| skipped
     source -->|"Convert cache misses"| decoder
     gallery -->|"Gallery HTTP requests"| httpx
     device ==>|"Device HTTP requests"| httpx
@@ -139,9 +130,9 @@ device, and metrics clients use separate configured instances of the shared HTTP
 helper. Metrics delivery disables its own telemetry to prevent recursion.
 Playback and rotation consume interfaces backed by the same source adapter and
 device client, so previews and sends reuse the same media cache, and manual and
-automatic device operations share one lock. The runner uses the `rotation.History`
-interface; `history.Store` owns the ordered slice, file persistence, retention, and
-history-size metrics. Membership checks scan the slice.
+automatic device operations share one lock. The source adapter owns candidate
+selection and stores its page and previous item ID in settings. The runner
+requests the next candidate without maintaining a separate playback record.
 
 ## Main runtime flows
 
@@ -149,11 +140,11 @@ history-size metrics. Membership checks scan the slice.
 
 1. A signed-in browser requests category or album metadata through the handlers
    and gallery client. Listing metadata does not download artwork for decoding.
-2. A preview request calls the source adapter. Known unsupported IDs are rejected
-   before loading. A valid cached GIF is returned immediately.
+2. A preview request calls the source adapter. A valid cached GIF is returned
+   immediately.
 3. On a cache miss, the gallery client downloads the original artwork, the decoder
    converts it to GIF, and the media store saves it. The handler returns the GIF.
-   Unsupported encodings are recorded in `skipped.json` to avoid repeated work.
+   A download or decoding failure returns an error without caching the response.
 
 ### Automatic playback
 
@@ -162,38 +153,19 @@ history-size metrics. Membership checks scan the slice.
 sequenceDiagram
     participant R as Rotation runner
     participant A as Source adapter
-    participant H as History store
-    participant F as history.json
-    participant M as Metrics client
+    participant S as Settings store
     participant D as Device client / gateway
 
-    H->>F: Load ordered filenames once during construction
-    F-->>H: Saved history, or empty if missing
-    Note over H: Keep an ordered slice in memory
     Note over R,D: Runner reads saved timing and source; no browser is required
     R->>D: Acquire shared display lock
-    R->>A: Fetch configured category/album pages
-    A-->>R: Eligible metadata, excluding known unsupported IDs
-    loop Until first unplayed candidate or source exhausted
-        R->>H: Contains(filename)
-        H-->>R: Membership from slice scan
-    end
-    Note over R: If all candidates were played, select first candidate
-    R->>A: Load cached GIF or download and decode
+    R->>A: NextAnimation
+    A->>S: Read source, page and previous item ID
+    A->>A: Find next eligible item; wrap at remote end
+    A->>S: Persist advanced cursor
+    A->>A: Load cached GIF or download and decode
     A-->>R: GIF bytes
     R->>D: POST /api/images or /api/animations
     D-->>R: Send completed
-    R->>H: Record(filename) with separate timeout
-    Note over H: Prepare updated slice; reset if filename already present
-    Note over H: Append filename; keep newest 1,000 entries
-    H->>F: Atomically save ordered filenames
-    F-->>H: Save succeeded
-    H->>H: Replace active slice
-    opt Metrics enabled
-        H->>M: WriteHistorySize(retained count)
-        Note over H,M: Metrics errors are logged; record remains successful
-    end
-    H-->>R: Record succeeded
     R->>R: Wait configured display duration
     R->>D: POST /api/display/clock
     D-->>R: Clock command completed
@@ -201,19 +173,15 @@ sequenceDiagram
     Note over R: Wait until next scheduled cycle
 ```
 
-The sequence shows a successful cycle. The runner chooses the first eligible
-item absent from recent history, restarting history when the source is exhausted.
-History is loaded once when the history store is constructed at application startup.
-The store keeps an ordered slice in memory and uses `slices.Contains` for membership
-checks. Adding a new filename beyond the 1,000-entry limit evicts the oldest entries.
-Recording an already played filename resets history to that filename. The runner
-uses a `Contains`/`Record` interface and records only completed sends. The store
-updates memory and reports the retained size only after a successful save;
-external edits to the history file require an application restart.
-Loading or sending failures leave history unchanged; unsupported encodings cause
-an immediate attempt with another item. A failed history save is reported as a
-cycle error and may allow the sent artwork to repeat. History saves after a
-completed send use a separate timeout so a concurrent pause does not cancel them.
+The sequence shows a successful cycle. Each iteration calls `NextAnimation`
+once. The source adapter resumes after the saved item on the saved page,
+filters metadata, persists the selected item's cursor, and loads its animation.
+It starts from page 1 when it reaches the remote end. A complete scan without
+selectable items reports an empty source.
+
+Download, decode, and upload failures end the iteration. The scheduler waits
+until the next scheduled cycle, which requests the next animation using the
+already advanced cursor. Failed items remain eligible after the cursor wraps.
 A clock restoration failure stops autoplay and exposes an error in the UI.
 
 ### Manual commands
@@ -229,9 +197,7 @@ it does not verify the physical display's rendered output.
 
 | Location | Owner | Contents |
 | --- | --- | --- |
-| `DATA_DIR/settings.json` | `internal/settings` | Autoplay source, timing, enabled state, clock appearance |
-| `DATA_DIR/history.json` | `internal/history` | Successfully sent automatic artwork filenames; failures leave history unchanged |
-| `DATA_DIR/skipped.json` | `internal/skipped`, populated by source adapter | Gallery IDs with unsupported artwork encodings |
+| `DATA_DIR/settings.json` | `internal/settings` | Autoplay source, page and previous item ID, timing, enabled state, clock appearance |
 | `DATA_DIR/media/<ID>.gif` | `internal/media`, populated by source adapter | Converted GIFs retained without automatic eviction |
 
 The default data directory is `var/lib/divoom_gallery_web/`, relative to the
@@ -243,12 +209,12 @@ Templates and static assets are embedded at build time; no separate frontend
 server, database, or message broker is required. Run one controller per account,
 device, and media directory.
 
-Metrics are enabled only when `DIVOOM_METRICS_URL` is set. History saves and
-gallery/device HTTP attempts enqueue samples for one background worker. Its queue
+Metrics are enabled only when `DIVOOM_METRICS_URL` is set.
+Gallery/device HTTP attempts enqueue samples for one background worker. Its queue
 holds 256 pending samples; full queues drop new samples, and delivery failures
 are logged without failing the originating operation. Shutdown allows up to five
 seconds to flush the queue and final partial request-count window. HTTP duration
-and history samples send immediately. The metrics client also counts HTTP attempts
+samples send immediately. The metrics client also counts HTTP attempts
 in a map keyed by service, method, and path. Every minute it swaps the map and
 sends one batch containing `divoom_http_requests_per_minute` samples for all active
 groups; new attempts accumulate in the next window. Counts include failed attempts
@@ -262,7 +228,6 @@ failed count deliveries are logged without retries.
 - [Routes and web security](../internal/handlers/server.go)
 - [Manual command coordination](../internal/playback/controller.go)
 - [Automatic playback and selection](../internal/rotation/runner.go)
-- [History interface](../internal/rotation/history.go) and [history store](../internal/history/store.go)
 - [Gallery/media adapter](../internal/source/adapter.go) and [gallery API client](../internal/gallery/client.go)
 - [Device gateway client](../internal/device/client.go) and [integration contract](http-client-agent-guide.md)
 - [Shared HTTP helper](../internal/httpx/http.go) and [metrics worker](../internal/metrics/client.go)

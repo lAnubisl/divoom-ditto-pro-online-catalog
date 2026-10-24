@@ -72,12 +72,6 @@ func (c *Client) Close() {
 	})
 }
 
-func (c *Client) WriteHistorySize(_ context.Context, size int) error {
-	// The Prometheus import API expects timestamps in milliseconds.
-	body := fmt.Sprintf("# TYPE divoom_gallery_history_size gauge\ndivoom_gallery_history_size %d %d\n", size, time.Now().UnixMilli())
-	return c.enqueue(body)
-}
-
 // WriteHTTPRequestDuration queues one duration sample and counts the attempt
 // for the current minute, even if the duration queue is full.
 // Reporting survives cancellation of the original request.
@@ -96,14 +90,8 @@ func (c *Client) WriteHTTPRequestDuration(_ context.Context, timing httpx.Reques
 	return c.enqueueLocked(body)
 }
 
-// enqueue never waits for network delivery or queue space. Errors indicate that
-// the sample was dropped; delivery failures are logged by the worker.
-func (c *Client) enqueue(body string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.enqueueLocked(body)
-}
-
+// enqueueLocked never waits for network delivery or queue space. Errors indicate
+// that the sample was dropped; delivery failures are logged by the worker.
 func (c *Client) enqueueLocked(body string) error {
 	if c.closed {
 		return errors.New("metrics: client closed")

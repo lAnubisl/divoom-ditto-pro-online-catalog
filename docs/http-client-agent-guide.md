@@ -152,7 +152,7 @@ There are no device API routes for gallery browsing, remote URL fetching,
 device discovery, multiple-device selection, playlists, stored slots, display
 readback, brightness, power, or deleting uploaded content. Each configured API
 server controls its configured device. Implement gallery browsing, favorites,
-history, caching, and any scheduling in the new application.
+source navigation, caching, and any scheduling in the new application.
 
 ## Deadlines, cancellation, and failures
 
