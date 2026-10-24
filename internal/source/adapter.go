@@ -25,6 +25,14 @@ type Adapter struct {
 	api        API
 	media      *media.Store
 	gate       chan struct{}
+	lastPage   *cachedPage
+}
+
+type cachedPage struct {
+	kind     string
+	sourceID int64
+	page     int
+	result   gallery.Page
 }
 
 func New(api API, media *media.Store, prefs *settings.Store) *Adapter {
@@ -135,6 +143,20 @@ func (a *Adapter) saveCursor(ctx context.Context, prefs settings.Values, page in
 }
 
 func (a *Adapter) fetchPage(ctx context.Context, kind string, sourceID int64, page int) (gallery.Page, error) {
+	if err := ctx.Err(); err != nil {
+		return gallery.Page{}, err
+	}
+	if cached := a.lastPage; cached != nil && cached.kind == kind && cached.sourceID == sourceID && cached.page == page {
+		return cached.result, nil
+	}
+	result, err := a.fetchRemotePage(ctx, kind, sourceID, page)
+	if err == nil {
+		a.lastPage = &cachedPage{kind: kind, sourceID: sourceID, page: page, result: result}
+	}
+	return result, err
+}
+
+func (a *Adapter) fetchRemotePage(ctx context.Context, kind string, sourceID int64, page int) (gallery.Page, error) {
 	if kind == "album" {
 		return a.api.FetchAlbumPage(ctx, sourceID, page)
 	}

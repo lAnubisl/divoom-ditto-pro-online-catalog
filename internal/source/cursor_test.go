@@ -94,7 +94,7 @@ func TestCandidateResumesCursorAcrossRestartAndWraps(t *testing.T) {
 	a = New(api, nil, reopened)
 	wantCandidate(t, a, 41, 4)
 	wantCandidate(t, a, 11, 1)
-	want := []pageRequest{{"category", 3, 3}, {"category", 3, 3}, {"category", 3, 4}, {"category", 3, 4}, {"category", 3, 5}, {"category", 3, 1}}
+	want := []pageRequest{{"category", 3, 3}, {"category", 3, 3}, {"category", 3, 4}, {"category", 3, 5}, {"category", 3, 1}}
 	if !slices.Equal(api.requests, want) {
 		t.Fatalf("pages=%v want=%v", api.requests, want)
 	}

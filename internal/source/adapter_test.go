@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"errors"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"divoom-gallery-client/internal/animation"
@@ -48,6 +49,50 @@ func (a *testAPI) page(page int) (gallery.Page, error) {
 func (a *testAPI) FetchItem(context.Context, gallery.Item) ([]byte, error) {
 	a.downloads++
 	return a.raw, a.err
+}
+
+func TestFetchPageCachesOnlyLastParameterCombination(t *testing.T) {
+	api := &testAPI{items: cursorItems(42)}
+	adapter := New(api, nil, nil)
+	requests := []pageRequest{
+		{"category", 3, 1},
+		{"album", 3, 1},
+		{"album", 4, 1},
+		{"album", 4, 2},
+		{"category", 3, 1}, // Returning to an older key fetches it again.
+	}
+	for i, request := range requests {
+		first, err := adapter.fetchPage(context.Background(), request.kind, request.id, request.page)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Change the API response so the second call must return cached data.
+		api.items = cursorItems(int64(100 + i))
+		cached, err := adapter.fetchPage(context.Background(), request.kind, request.id, request.page)
+		if err != nil || !reflect.DeepEqual(cached, first) {
+			t.Fatalf("cached page=%+v want=%+v err=%v", cached, first, err)
+		}
+		if len(api.requests) != i+1 {
+			t.Fatalf("unexpected requests: %v", api.requests)
+		}
+	}
+	if !reflect.DeepEqual(api.requests, requests) {
+		t.Fatalf("requests=%v want=%v", api.requests, requests)
+	}
+}
+
+func TestFetchPageRetriesErrors(t *testing.T) {
+	api := &testAPI{pageError: errors.New("network timeout")}
+	adapter := New(api, nil, nil)
+	if _, err := adapter.fetchPage(context.Background(), "category", 3, 1); !errors.Is(err, api.pageError) {
+		t.Fatalf("expected page error: %v", err)
+	}
+	api.pageError = nil
+	api.items = cursorItems(42)
+	result, err := adapter.fetchPage(context.Background(), "category", 3, 1)
+	if err != nil || len(result.Items) != 1 || result.Items[0].ID != 42 || len(api.requests) != 2 {
+		t.Fatalf("failed response was not retried: result=%+v requests=%v err=%v", result, api.requests, err)
+	}
 }
 
 func TestUnsupportedItemRemainsCandidateAfterFailure(t *testing.T) {
