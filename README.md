@@ -161,7 +161,7 @@ go build -o bin/divoom-gallery-web ./cmd/server
 ```
 
 On Windows, use `bin/divoom-gallery-web.exe` as the output filename. For Linux
-service installation and updates, see the [deployment guide](deploy/README.md).
+updates through Woodpecker CI, see the [deployment guide](deploy/README.md).
 
 ## Documentation
 
@@ -170,7 +170,7 @@ service installation and updates, see the [deployment guide](deploy/README.md).
 - [Clock controls](docs/clock-settings.md)
 - [Divoom hosted API reference](docs/divoom-api/README.md)
 - [Artwork formats and decoding](docs/divoom-api/divoom-artwork-formats.md)
-- [Linux service deployment](deploy/README.md)
+- [Woodpecker CI deployment](deploy/README.md)
 
 ## Acknowledgements
 

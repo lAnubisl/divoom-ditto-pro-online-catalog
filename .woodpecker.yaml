@@ -1,0 +1,38 @@
+when:
+  - event: [push, pull_request, manual]
+
+concurrency: 1
+
+steps:
+  - name: build
+    image: golang:1.27-bookworm
+    commands:
+      - mkdir -p dist
+      - CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -trimpath -ldflags '-s -w' -o dist/candidate ./cmd/server
+      - cd dist && sha256sum candidate > SHA256SUMS
+
+  - name: deploy
+    image: debian:bookworm-slim
+    depends_on: [build]
+    when:
+      - event: [push, manual]
+        branch: main
+        status: success
+    environment:
+      DEPLOY_HOST:
+        from_secret: deploy_host
+      DEPLOY_PORT:
+        from_secret: deploy_port
+      DEPLOY_USER:
+        from_secret: deploy_user
+      DEPLOY_SERVICE_USER:
+        from_secret: deploy_service_user
+      DEPLOY_HEALTH_URL:
+        from_secret: deploy_health_url
+      DEPLOY_SSH_KEY:
+        from_secret: deploy_ssh_key
+      DEPLOY_KNOWN_HOSTS:
+        from_secret: deploy_known_hosts
+    commands:
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends openssh-client ca-certificates
+      - bash deploy/deploy.sh
